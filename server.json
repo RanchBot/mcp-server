@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "bot.ranch/mcp-server",
+  "description": "Read and write cattle and sheep records with farm-scoped, revocable access.",
+  "repository": {
+    "url": "https://github.com/RanchBot/mcp-server",
+    "source": "github"
+  },
+  "websiteUrl": "https://ranch.bot",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@ranchbot/mcp-server",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
