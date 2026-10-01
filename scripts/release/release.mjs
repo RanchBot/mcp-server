@@ -75,9 +75,7 @@ export function assertVersionAlignment(version, checks) {
   assertStableVersion(version);
   for (const { label, value } of checks) {
     if (value !== version) {
-      throw new Error(
-        `${label} is ${JSON.stringify(value)}, expected ${JSON.stringify(version)} for this tag`,
-      );
+      throw new Error(`${label} is ${JSON.stringify(value)}, expected ${JSON.stringify(version)}`);
     }
   }
   return version;
@@ -90,6 +88,90 @@ export function versionChecks({ packageJson, lockfile, extra = [] }) {
     { label: 'package-lock.json version', value: lockfile?.version },
     { label: 'package-lock.json packages[""].version', value: lockfile?.packages?.['']?.version },
     ...extra,
+  ];
+}
+
+/**
+ * Find every `<packageName>@<pin>` reference in Markdown, keeping the 1-based
+ * line so a mismatch names the exact location. Pins are captured verbatim
+ * rather than parsed as semver ranges, so a floating tag like `@latest` or
+ * `@^1.1.0` is reported instead of silently accepted.
+ */
+export function findPackagePins(text, packageName) {
+  const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`${escaped}@([^\\s\`'"),;\\]]+)`, 'g');
+  const pins = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const line = text.slice(0, match.index).split('\n').length;
+    pins.push({ line, value: match[1] });
+  }
+  return pins;
+}
+
+/**
+ * Build version checks from the pinned `<packageName>@<version>` references in
+ * a packaged Markdown file. `requirePins` and `requiredSnippets` let the CLI
+ * require its installation copy without forcing a convention on the MCP README.
+ */
+export function pinnedReferenceChecks({
+  text,
+  packageName,
+  label,
+  requirePins = false,
+  requiredSnippets = [],
+}) {
+  if (requirePins) {
+    for (const snippet of requiredSnippets) {
+      if (!text.includes(snippet)) {
+        throw new Error(`${label} must document ${JSON.stringify(snippet)}`);
+      }
+    }
+  }
+  const pins = findPackagePins(text, packageName);
+  if (requirePins && pins.length === 0) {
+    throw new Error(`${label} must pin ${packageName} to an explicit version`);
+  }
+  return pins.map((pin) => ({
+    label: `${label}:${pin.line} ${packageName} pin`,
+    value: pin.value,
+  }));
+}
+
+/**
+ * Require a heading for the candidate version in a changelog while leaving
+ * historical headings untouched. A missing heading fails closed.
+ */
+export function assertChangelogHeading({ text, version, label = 'CHANGELOG.md' }) {
+  const escaped = String(version).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const heading = new RegExp(`^#{1,6}\\s*\\[?${escaped}\\]?(?:\\s|$)`, 'm');
+  if (!heading.test(text)) {
+    throw new Error(`${label} is missing a heading for version ${version}`);
+  }
+  return [];
+}
+
+/**
+ * Build checks for the MCP `server.json` version and every npm package entry
+ * that publishes this package. A missing npm entry fails closed.
+ */
+export function serverJsonVersionChecks(serverJson, packageName) {
+  const packages = Array.isArray(serverJson?.packages) ? serverJson.packages : [];
+  const entries = [];
+  packages.forEach((entry, index) => {
+    if (entry?.registryType === 'npm' && entry?.identifier === packageName) {
+      entries.push({ index, version: entry.version });
+    }
+  });
+  if (entries.length === 0) {
+    throw new Error(`server.json has no npm package entry for ${packageName}`);
+  }
+  return [
+    { label: 'server.json version', value: serverJson?.version },
+    ...entries.map((entry) => ({
+      label: `server.json packages[${entry.index}].version`,
+      value: entry.version,
+    })),
   ];
 }
 

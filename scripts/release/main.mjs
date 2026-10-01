@@ -103,6 +103,22 @@ function validateTag() {
   setOutput({ version, tag, sha });
 }
 
+/**
+ * Read-only pre-publication check: every declared version copy must equal the
+ * candidate `package.json.version`. Shares the tag validator's checks, without
+ * requiring a tag, credentials, or registry access.
+ */
+function checkVersions() {
+  const packageJson = readJson('package.json');
+  const lockfile = readJson('package-lock.json');
+  assertVersionAlignment(
+    packageJson.version,
+    versionChecks({ packageJson, lockfile, extra: config.extraVersionChecks(root) }),
+  );
+  setOutput({ version: packageJson.version });
+  console.log(`versions ok: ${packageJson.version}`);
+}
+
 function checkTarball() {
   const packPath = process.env.PACK_RESULT || 'pack-result.json';
   const record = parsePackResult(readJson(packPath), config.packageName);
@@ -499,6 +515,7 @@ async function githubRelease() {
 const commands = {
   gate,
   'validate-tag': validateTag,
+  'check-versions': checkVersions,
   'check-tarball': checkTarball,
   'registry-status': registryStatus,
   'verify-registry': verifyRegistryEntry,

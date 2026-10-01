@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import * as config from './config.mjs';
 import {
   MANIFEST_ASSET_NAME,
+  assertChangelogHeading,
   assertIntegrity,
   assertReleaseIdentity,
   assertStableVersion,
@@ -15,14 +16,17 @@ import {
   buildReleaseManifest,
   classifyNpmView,
   compareManifests,
+  findPackagePins,
   gitHubReleasePlan,
   parseManifest,
   parsePackResult,
   parseStableTag,
+  pinnedReferenceChecks,
   readRegistryView,
   registryDecision,
   releaseEnabled,
   renderReleaseNotes,
+  serverJsonVersionChecks,
   sha512Integrity,
   verifyRegistry,
   versionChecks,
@@ -32,6 +36,25 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const sha = 'a'.repeat(40);
 const integrity =
   'sha512-m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw==';
+
+test('packaged README refuses saved-birth correction and limits fresh previews to unconfirmed proposals', () => {
+  const readme = readFileSync(join(root, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+
+  assert.match(readme, /Before confirmation only, changes to an unconfirmed proposal/);
+  assert.match(readme, /Saved birth correction is not currently supported/);
+  assert.match(readme, /stop and refer the producer to https:\/\/ranch\.bot\/support/);
+  assert.match(readme, /Do not promise an amendment/);
+  assert.match(readme, /Never re-record a saved birth/);
+  assert.match(readme, /new preview\/confirmation, a new `request_id`/);
+  assert.match(
+    readme,
+    /stripped or forged source provenance, or generic animal, record, or task edits/,
+  );
+  assert.match(readme, /even with producer approval/);
+  assert.match(readme, /unchanged retry of the exact approved tuple.*not a correction/);
+  assert.match(readme, /outcome is uncertain, reconcile with reads before any further write/);
+  assert.doesNotMatch(readme, /Corrections (?:or changed evidence )?require a fresh preview/);
+});
 
 test('only the literal true enables publication', () => {
   assert.equal(releaseEnabled('true'), true);
@@ -84,7 +107,15 @@ test('builds package metadata version checks', () => {
 });
 
 test('enforces the tarball runtime allowlist', () => {
-  const allowed = ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.d.ts'];
+  const allowed = [
+    'package.json',
+    'README.md',
+    'LICENSE',
+    'dist/index.js',
+    'dist/index.d.ts',
+    'skills/ranchbot/SKILL.md',
+    'skills/ranchbot/references/cli.md',
+  ];
   assert.equal(assertTarballAllowlist(allowed, config.tarball), allowed);
   for (const unexpected of ['src/index.ts', 'scripts/release/main.mjs', 'PUBLISHING.md']) {
     assert.throws(
@@ -583,12 +614,181 @@ test('renders release notes with pinned commands and evidence', () => {
   );
 });
 
-test('package config reads every version source and pins the runtime allowlist', () => {
+test('finds package install pins with their line', () => {
+  const text = [
+    '# Title',
+    'npm install -g @ranchbot/cli@1.1.0',
+    '',
+    'npx -y @ranchbot/cli@1.1.1 --help',
+    'an unrelated @ranchbot/mcp-server@0.1.1 reference',
+  ].join('\n');
+  assert.deepEqual(findPackagePins(text, '@ranchbot/cli'), [
+    { line: 2, value: '1.1.0' },
+    { line: 4, value: '1.1.1' },
+  ]);
+});
+
+test('packaged README pins must be present, explicit, and matched', () => {
+  const requiredSnippets = ['npm install -g @ranchbot/cli@', 'npx -y @ranchbot/cli@'];
+  const checks = pinnedReferenceChecks({
+    text: 'npm install -g @ranchbot/cli@1.1.1\nnpx -y @ranchbot/cli@1.1.1 --help',
+    packageName: '@ranchbot/cli',
+    label: 'README.md',
+    requirePins: true,
+    requiredSnippets,
+  });
+  assert.deepEqual(checks, [
+    { label: 'README.md:1 @ranchbot/cli pin', value: '1.1.1' },
+    { label: 'README.md:2 @ranchbot/cli pin', value: '1.1.1' },
+  ]);
+
+  // The exact reported failure: candidate 1.1.1 with a README pin at 1.1.0.
+  assert.throws(
+    () =>
+      assertVersionAlignment(
+        '1.1.1',
+        pinnedReferenceChecks({
+          text: 'npx -y @ranchbot/cli@1.1.0',
+          packageName: '@ranchbot/cli',
+          label: 'README.md',
+        }),
+      ),
+    /README\.md:1 @ranchbot\/cli pin is "1\.1\.0", expected "1\.1\.1"/,
+  );
+
+  // Malformed and floating pins are reported verbatim.
+  for (const pin of ['latest', '^1.1.0', '1.1']) {
+    assert.throws(
+      () =>
+        assertVersionAlignment(
+          '1.1.1',
+          pinnedReferenceChecks({
+            text: `@ranchbot/cli@${pin}`,
+            packageName: '@ranchbot/cli',
+            label: 'README.md',
+          }),
+        ),
+      /expected "1\.1\.1"/,
+    );
+  }
+
+  // Required installation copy and explicit pins fail closed when missing.
+  assert.throws(
+    () =>
+      pinnedReferenceChecks({
+        text: 'npx -y @ranchbot/cli@1.1.1',
+        packageName: '@ranchbot/cli',
+        label: 'README.md',
+        requirePins: true,
+        requiredSnippets,
+      }),
+    /must document "npm install -g @ranchbot\/cli@"/,
+  );
+  assert.throws(
+    () =>
+      pinnedReferenceChecks({
+        text: 'no install copy',
+        packageName: '@ranchbot/cli',
+        label: 'README.md',
+        requirePins: true,
+      }),
+    /must pin @ranchbot\/cli/,
+  );
+
+  // A README with no own-package pins is allowed when not required (MCP).
+  assert.deepEqual(
+    pinnedReferenceChecks({ text: 'plain README', packageName: '@ranchbot/mcp-server' }),
+    [],
+  );
+});
+
+test('requires the candidate changelog heading and keeps history', () => {
+  const text = '# Changelog\n\n## 1.1.1\n\n- now\n\n## 1.1.0\n\n- before\n';
+  assert.doesNotThrow(() => assertChangelogHeading({ text, version: '1.1.1' }));
+  assert.throws(
+    () => assertChangelogHeading({ text, version: '1.2.0' }),
+    /missing a heading for version 1\.2\.0/,
+  );
+});
+
+test('checks every MCP server.json npm entry and fails when absent', () => {
+  const serverJson = {
+    version: '0.1.1',
+    packages: [
+      { registryType: 'npm', identifier: '@ranchbot/mcp-server', version: '0.1.1' },
+      { registryType: 'oci', identifier: 'example', version: '9.9.9' },
+    ],
+  };
+  assert.deepEqual(
+    serverJsonVersionChecks(serverJson, '@ranchbot/mcp-server').map((check) => check.label),
+    ['server.json version', 'server.json packages[0].version'],
+  );
+  assert.throws(
+    () => serverJsonVersionChecks({ version: '0.1.1', packages: [] }, '@ranchbot/mcp-server'),
+    /no npm package entry/,
+  );
+  assert.throws(
+    () =>
+      assertVersionAlignment(
+        '0.1.1',
+        serverJsonVersionChecks(
+          {
+            version: '0.1.1',
+            packages: [
+              { registryType: 'npm', identifier: '@ranchbot/mcp-server', version: '0.1.0' },
+            ],
+          },
+          '@ranchbot/mcp-server',
+        ),
+      ),
+    /server\.json packages\[0\]\.version is "0\.1\.0", expected "0\.1\.1"/,
+  );
+});
+
+test('each package-lock version field fails independently', () => {
+  const base = {
+    packageJson: { version: '1.1.1' },
+    lockfile: { version: '1.1.1', packages: { '': { version: '1.1.1' } } },
+  };
+  assert.equal(assertVersionAlignment('1.1.1', versionChecks(base)), '1.1.1');
+  assert.throws(
+    () =>
+      assertVersionAlignment(
+        '1.1.1',
+        versionChecks({ ...base, lockfile: { ...base.lockfile, version: '1.1.0' } }),
+      ),
+    /package-lock\.json version is "1\.1\.0", expected "1\.1\.1"/,
+  );
+  assert.throws(
+    () =>
+      assertVersionAlignment(
+        '1.1.1',
+        versionChecks({
+          ...base,
+          lockfile: { ...base.lockfile, packages: { '': { version: '1.1.0' } } },
+        }),
+      ),
+    /package-lock\.json packages\[""\]\.version is "1\.1\.0", expected "1\.1\.1"/,
+  );
+});
+
+test('local candidate checks pass without credentials or registry access', () => {
+  const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const lockfile = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
+  const checks = versionChecks({ packageJson, lockfile, extra: config.extraVersionChecks(root) });
+  assert.equal(assertVersionAlignment(packageJson.version, checks), packageJson.version);
+});
+
+test('package config checks MCP metadata and README pins', () => {
   assert.equal(config.repository, 'RanchBot/mcp-server');
-  assert.deepEqual(config.tarball.dirs, ['dist']);
-  const checks = config.extraVersionChecks(root);
+  assert.deepEqual(config.tarball.dirs, ['dist', 'skills']);
+  assert.ok(
+    config.tarball.requiredRootFiles.includes('skills/ranchbot/SKILL.md'),
+    'the public agent skill must survive packing',
+  );
   const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
-  assert.equal(checks.length, 4);
+  const checks = config.extraVersionChecks(root);
+  assert.equal(checks.length, 2, 'server.json version and npm package entry are checked');
   for (const check of checks) {
     assert.equal(check.value, version, `${check.label} must match package.json`);
   }

@@ -1,6 +1,6 @@
 {
   "name": "@ranchbot/mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for Ranch.Bot — livestock records for cattle and sheep operations, usable from Claude, Claude Code, and any MCP client.",
   "mcpName": "bot.ranch/mcp-server",
   "main": "dist/index.js",
@@ -9,10 +9,12 @@
   },
   "files": [
     "dist",
+    "skills",
     "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "check:versions": "node scripts/release/main.mjs check-versions",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",

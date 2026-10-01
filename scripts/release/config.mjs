@@ -4,6 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pinnedReferenceChecks, serverJsonVersionChecks } from './release.mjs';
 
 export const packageName = '@ranchbot/mcp-server';
 export const repository = 'RanchBot/mcp-server';
@@ -11,27 +12,28 @@ export const binary = 'ranchbot-mcp';
 
 /** Runtime allowlist for the published tarball. `server.json` stays in the repo. */
 export const tarball = {
-  dirs: ['dist'],
+  dirs: ['dist', 'skills'],
   rootFiles: ['README.md', 'LICENSE'],
-  requiredRootFiles: ['README.md', 'LICENSE', 'dist/index.js', 'dist/index.d.ts'],
+  requiredRootFiles: [
+    'README.md',
+    'LICENSE',
+    'dist/index.js',
+    'dist/index.d.ts',
+    'skills/ranchbot/SKILL.md',
+  ],
 };
 
-/** Every declared version that must match the release tag. */
+/**
+ * Every declared version that must match the release tag or candidate. Runtime
+ * CLI/MCP versions derive from package metadata, so server.json and any
+ * packaged README pins still need an explicit copy check.
+ */
 export function extraVersionChecks(root) {
   const serverJson = JSON.parse(readFileSync(join(root, 'server.json'), 'utf8'));
-  const index = readFileSync(join(root, 'src/index.ts'), 'utf8');
-  const factory = readFileSync(join(root, 'src/serverFactory.ts'), 'utf8');
+  const readme = readFileSync(join(root, 'README.md'), 'utf8');
   return [
-    { label: 'server.json version', value: serverJson.version },
-    { label: 'server.json packages[0].version', value: serverJson.packages?.[0]?.version },
-    {
-      label: 'src/index.ts --version output',
-      value: /console\.log\('(\d+\.\d+\.\d+)'\)/.exec(index)?.[1],
-    },
-    {
-      label: 'src/serverFactory.ts handshake version',
-      value: /version: '(\d+\.\d+\.\d+)'/.exec(factory)?.[1],
-    },
+    ...serverJsonVersionChecks(serverJson, packageName),
+    ...pinnedReferenceChecks({ text: readme, packageName, label: 'README.md' }),
   ];
 }
 

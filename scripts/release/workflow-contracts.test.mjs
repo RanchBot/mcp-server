@@ -47,6 +47,7 @@ test('CI workflow is self-contained, read-only, and gated', () => {
     'npm run typecheck',
     'npm run lint',
     'npm run prettier',
+    'npm run check:versions',
     'npm run build',
     'npm test -- --coverage --runInBand',
     'node --test scripts/release/*.test.mjs',
@@ -70,6 +71,7 @@ test('Release workflow validates before publishing and stays minimal', () => {
   assert.match(release, /cancel-in-progress: false/);
   assert.match(release, /NPM_RELEASE_ENABLED/);
   assert.match(release, /main\.mjs gate/);
+  assert.match(release, /main\.mjs validate-tag/);
   assert.match(release, /persist-credentials: false/);
   assert.match(release, /uses: \.\/\.github\/workflows\/ci\.yml/);
   assert.match(release, /node-version: '22'/);
@@ -135,6 +137,10 @@ test('monorepo root jobs run the release helper suites', (t) => {
   assert.ok(
     jobs[expected].includes('npm run test:release'),
     `root ${expected} must run the release helper tests`,
+  );
+  assert.ok(
+    jobs[expected].includes('npm run check:versions'),
+    `root ${expected} must check version metadata before publication`,
   );
 });
 

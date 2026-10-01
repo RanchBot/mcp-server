@@ -54,6 +54,9 @@ jobs:
       - name: Format
         run: npm run prettier
 
+      - name: Check version metadata
+        run: npm run check:versions
+
       - name: Build
         run: npm run build
 

@@ -8,6 +8,7 @@ import { RanchBotApiClient } from './client';
 import { createRanchBotServer, ServerDeps } from './serverFactory';
 import { getStdioClient, login, logout } from './stdioClient';
 import { getDefaultFarm, setDefaultFarm } from './tools/list_my_farms';
+import { PACKAGE_VERSION } from './version';
 
 const stdioDeps: ServerDeps = {
   getClient: getStdioClient,
@@ -164,7 +165,7 @@ async function main() {
       return;
     case '--version':
     case '-v':
-      console.log('0.1.0');
+      console.log(PACKAGE_VERSION);
       return;
     case 'login':
       await login();

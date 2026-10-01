@@ -55,6 +55,12 @@ async function stdioSmoke() {
       capabilities: {},
       clientInfo: { name: 'release-smoke', version: '1.0.0' },
     });
+    if (init?.serverInfo?.version !== expectedVersion) {
+      throw new Error(
+        `initialize reported serverInfo.version ${JSON.stringify(init?.serverInfo?.version)}, ` +
+          `expected ${expectedVersion}`,
+      );
+    }
     if (!init?.serverInfo?.name) throw new Error('initialize returned no serverInfo');
     child.stdin.write(
       `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`,

@@ -73,6 +73,26 @@ A source checkout can point an MCP client at the built file. Example shape:
 Use a real public OAuth client from the development environment. Never commit API keys, OAuth
 tokens, or secret-bearing client registrations.
 
+## Agent skill
+
+The package ships the same public Agent Skill bundle as the CLI at `skills/ranchbot` (`SKILL.md`
+plus `references/`). It teaches an agent task selection, approvals, multi-step workflows, and
+recovery; it is optional guidance, not a capability or a security boundary.
+
+Once the public repository contains the bundle, install it with the Agent Skills installer:
+
+```bash
+npx skills add RanchBot/mcp-server --skill ranchbot
+```
+
+The CLI ships the same bundle and offers the equivalent route:
+`npx skills add RanchBot/cli --skill ranchbot`. Install **one** copy, inspect the source, and choose
+the agent/project scope your installer offers; you can also copy the entire `ranchbot` folder into a
+skill directory your host supports. The installer is third-party tooling and may emit its own
+telemetry and directory discovery; installing a skill promises no listing or ranking benefit. It
+does not install `ranchbot-mcp`, configure your MCP client, authenticate you, or authorize farm
+operations.
+
 ## Authentication
 
 The stdio transport uses Ranch.Bot's OAuth device flow. Run `node dist/index.js login` in a
@@ -131,8 +151,18 @@ revocation.
 `preview_birth_event` returns the complete birth bundle, resolved evidence, and a confirmation hash
 without saving farm data. Show every field to the producer and obtain explicit approval before
 `confirm_birth_event`, preserving the exact `request_id`, `bundle`, and `confirmation_hash`.
-Corrections or changed evidence require a fresh preview and renewed approval. Confirmation requires
-EDITOR access and `write:records`, `write:animals`, and `write:groups` scopes.
+Confirmation requires EDITOR access and `write:records`, `write:animals`, and `write:groups` scopes.
+
+Before confirmation only, changes to an unconfirmed proposal or its referenced evidence require
+a fresh preview and renewed producer approval. An unchanged retry of the exact approved tuple
+returns the already-saved event; it is not a correction. If a confirmation outcome is uncertain,
+reconcile with reads before any further write.
+
+Saved birth correction is not currently supported. To correct a saved birth, stop and refer the
+producer to https://ranch.bot/support. Do not promise an amendment. Never re-record a saved birth
+through a new preview/confirmation, a new `request_id`, stripped or forged source provenance, or
+generic animal, record, or task edits, even with producer approval.
+
 `list_birth_events` and `get_birth_event` retrieve saved events; `list_farm_tasks` includes undated
 TODOs, and `update_farm_task` changes status or the optional due date. `list_protocol_versions` and
 `create_protocol_version` use producer-provided immutable steps without inventing care instructions.
@@ -153,7 +183,7 @@ npm test
 
 Public setup returns only after current OAuth/scopes, npm and Registry read-back, and clean-machine
 installation, authentication, farm scope, representative reads/writes, revocation, and upgrades
-pass. CLI 1.0.0 is already public and has independent setup guidance; local publication does not imply a hosted
+pass. The public CLI has independent setup guidance; local publication does not imply a hosted
 ChatGPT/Gemini connection. Current status:
 [ranch.bot/connect-your-ai](https://ranch.bot/connect-your-ai).
 

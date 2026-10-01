@@ -13,7 +13,7 @@ const mcpOnlyTools: Tool[] = [
   {
     name: 'farm_archive',
     description:
-      'Create, list, inspect, cancel or download a complete farm archive of data you can access. No subscription needed. Downloads write a new private ZIP at output_path on this MCP host. Other members’ private conversations and account credentials are excluded.',
+      "Farm archive operations. `list` and `status` are reads. `create` starts a new private archive job and needs approval. `cancel` stops a pending job and needs approval. `download` writes a new private ZIP at output_path on this MCP host (not the user's chat machine) and needs an approved destination. No subscription needed. Other members’ private conversations and account credentials are excluded.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -24,6 +24,8 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['operation'],
     },
+    // Conservative because this one tool combines reads with job writes and a local download.
+    annotations: { readOnlyHint: false, destructiveHint: false },
   },
   // Farm / context tools
   {
@@ -33,6 +35,7 @@ const mcpOnlyTools: Tool[] = [
       type: 'object',
       properties: {},
     },
+    annotations: { readOnlyHint: true },
   },
   {
     name: 'get_farm',
@@ -47,10 +50,12 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['farm_id'],
     },
+    annotations: { readOnlyHint: true },
   },
   {
     name: 'set_default_farm',
-    description: 'Set the default farm ID for subsequent operations',
+    description:
+      'Change the saved default farm for later calls on this session. This changes context, not farm data; it is unnecessary when every scoped call passes farm_id explicitly, and it should be used only when the user asks.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -61,6 +66,7 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['farm_id'],
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
   {
     name: 'get_current_context',
@@ -69,11 +75,13 @@ const mcpOnlyTools: Tool[] = [
       type: 'object',
       properties: {},
     },
+    annotations: { readOnlyHint: true },
   },
   // Animal tools with MCP-specific semantics (no chat equivalent)
   {
     name: 'find_animal_by_identifier',
-    description: 'Find or create an animal by EID (Electronic ID)',
+    description:
+      'Find or create an animal by EID (Electronic ID). This is a write-capable lookup: if no match exists it creates an animal. Never call it for a read-only identifier lookup; use list_animals, get_animal, or list_identifiers instead.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -88,6 +96,8 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['eid'],
     },
+    // Find-or-create: not read-only, and no idempotency promise is made here.
+    annotations: { readOnlyHint: false, destructiveHint: false },
   },
   {
     name: 'remove_identifier',
@@ -110,6 +120,7 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['animal_id', 'identifier_id'],
     },
+    annotations: { readOnlyHint: false, destructiveHint: true },
   },
   // Concierge import processing (admin account only; non-admins get 401 from the API)
   {
@@ -128,6 +139,7 @@ const mcpOnlyTools: Tool[] = [
         take: { type: 'number', description: 'Page size' },
       },
     },
+    annotations: { readOnlyHint: true },
   },
   {
     name: 'get_import_request',
@@ -143,6 +155,7 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['import_request_id'],
     },
+    annotations: { readOnlyHint: true },
   },
   {
     name: 'update_import_request_status',
@@ -167,6 +180,7 @@ const mcpOnlyTools: Tool[] = [
       },
       required: ['import_request_id', 'status'],
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
 ];
 

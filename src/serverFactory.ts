@@ -6,8 +6,10 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import { RanchBotApiClient } from './client';
+import { SERVER_INSTRUCTIONS } from './serverInstructions';
 import { getToolHandlerPath } from './toolRegistry';
 import { registerTools } from './tools';
+import { PACKAGE_VERSION } from './version';
 
 /**
  * Tools that are not farm-scoped: they work across farms (or, for the admin
@@ -44,8 +46,8 @@ export interface ServerDeps {
  */
 export const createRanchBotServer = (deps: ServerDeps): Server => {
   const server = new Server(
-    { name: 'ranchbot-mcp-server', version: '0.1.0' },
-    { capabilities: { tools: {} } },
+    { name: 'ranchbot-mcp-server', version: PACKAGE_VERSION },
+    { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
