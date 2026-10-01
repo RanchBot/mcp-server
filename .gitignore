@@ -3,6 +3,11 @@ dist/
 *.log
 .env
 .DS_Store
+*.tgz
+pack-result.json
+release-manifest.json
+release-notes.md
+generated-notes.md
 
 
 

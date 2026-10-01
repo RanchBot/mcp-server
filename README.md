@@ -36,11 +36,11 @@ node /absolute/path/to/mcp-server/dist/index.js
 
 Set these environment variables for the development environment:
 
-| Variable | Required state | Purpose |
-| --- | --- | --- |
-| `RANCHBOT_API_URL` | Explicit development API URL | Ranch.Bot API used by the source server |
-| `COGNITO_DEVICE_CLIENT_ID` | Explicit public development OAuth client | Device-flow registration for that API |
-| `API_VERSION` | Optional, defaults to `v1` | API version |
+| Variable                   | Required state                           | Purpose                                 |
+| -------------------------- | ---------------------------------------- | --------------------------------------- |
+| `RANCHBOT_API_URL`         | Explicit development API URL             | Ranch.Bot API used by the source server |
+| `COGNITO_DEVICE_CLIENT_ID` | Explicit public development OAuth client | Device-flow registration for that API   |
+| `API_VERSION`              | Optional, defaults to `v1`               | API version                             |
 
 The default is the stable public client `ranchbot-mcp`. Deploy its database migration before
 using cloud authentication. A local API URL alone does not select installation-local accounts.

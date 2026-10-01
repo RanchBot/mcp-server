@@ -1,0 +1,110 @@
+name: CI
+
+# Self-contained checks for the standalone @ranchbot/cli repository. This
+# workflow is also the reusable validation entrypoint called by release.yml
+# against the exact tagged commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact commit to validate (defaults to the triggering ref)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Checks (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Node setup
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run prettier
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test -- --coverage --runInBand
+        env:
+          CI: true
+
+      - name: Release helper tests
+        run: node --test scripts/release/*.test.mjs
+
+  native:
+    name: Native checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Node setup
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Native credential and session tests
+        run: npm test -- --runInBand --coverage=false --testPathPattern="tokenLock|tokenStorage|config.test|stdioSession"
+        env:
+          CI: true
+
+  ci-success:
+    name: CI success
+    if: always()
+    needs: [linux, native]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every validation job
+        run: |
+          test "${{ needs.linux.result }}" = "success"
+          test "${{ needs.native.result }}" = "success"

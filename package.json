@@ -20,9 +20,10 @@
     "start": "node dist/index.js",
     "test": "jest --config jest.config.cjs",
     "test:coverage": "jest --config jest.config.cjs --coverage",
+    "test:release": "node --test scripts/release/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "prettier": "prettier --check \"src/**/*.ts\"",
-    "prettier:fix": "prettier --write \"src/**/*.ts\""
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write ."
   },
   "repository": {
     "type": "git",
