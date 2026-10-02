@@ -217,3 +217,19 @@ cache. A successful HTTP response alone does not establish legacy revocation.
 Installation-local accounts retain the CLI-managed installation session: use
 `ranchbot login --local --api-url <installation>` and set `RANCHBOT_DEPLOYMENT_MODE=local` plus the
 same `RANCHBOT_API_URL` in the MCP client. MCP login/logout directs you to the CLI in that mode.
+
+## Safe EID lookup and compatibility
+
+`lookup_animal_by_eid` is read-only, accepts `eid` and optional `farm_id`, and requires Reader
+access. It searches exact active EIDs on active animals across inventory statuses. A missing match
+returns HTTP 404; multiple matching animals return HTTP 409. Neither case creates inventory.
+`find_or_create_animal_by_eid` deliberately creates inventory on a miss and requires Editor access.
+
+`find_animal_by_identifier` is deprecated and still **creates inventory** for compatibility.
+Migrate reads to `lookup_animal_by_eid` and approved creation to `find_or_create_animal_by_eid`.
+The deprecated alias remains through the current minor version; remove it only in a breaking release
+with release notes. Both creation tools carry `readOnlyHint: false`.
+
+Deploy the API's `/animals/lookup-by-eid` endpoint before releasing the new tool. An older API
+causes lookup to fail; clients never fall back to find-or-create. This source change does not
+establish npm, MCP Registry, or indexed-listing availability.

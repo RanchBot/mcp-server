@@ -181,7 +181,7 @@ jobs:
       - name: Publish the exact tested tarball
         if: steps.registry.outputs.publish == 'true'
         run: >-
-          npm publish "candidate/${{ needs.candidate.outputs.filename }}"
+          npm publish "./candidate/${{ needs.candidate.outputs.filename }}"
           --access public --tag latest --provenance
 
       - name: Verify the published registry entry

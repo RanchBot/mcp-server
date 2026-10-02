@@ -79,9 +79,50 @@ const mcpOnlyTools: Tool[] = [
   },
   // Animal tools with MCP-specific semantics (no chat equivalent)
   {
+    name: 'lookup_animal_by_eid',
+    description:
+      'Read-only exact EID lookup on one farm across inventory statuses. Never creates or changes animals. Missing matches return not found; multiple animals return an ambiguity error. Requires Reader access.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        farm_id: {
+          type: 'string',
+          description: 'The ID of the farm (optional if default is set)',
+        },
+        eid: {
+          type: 'string',
+          description: 'The EID to search for',
+        },
+      },
+      required: ['eid'],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: 'find_or_create_animal_by_eid',
+    description:
+      'Find or create an animal by EID (Electronic ID). This is a write-capable lookup: if no match exists it creates an animal. Requires Editor access and explicit intent to create inventory. Use lookup_animal_by_eid for reads.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        farm_id: {
+          type: 'string',
+          description: 'The ID of the farm (optional if default is set)',
+        },
+        eid: {
+          type: 'string',
+          description: 'The EID to search for',
+        },
+      },
+      required: ['eid'],
+    },
+    // Find-or-create: not read-only, and no idempotency promise is made here.
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  {
     name: 'find_animal_by_identifier',
     description:
-      'Find or create an animal by EID (Electronic ID). This is a write-capable lookup: if no match exists it creates an animal. Never call it for a read-only identifier lookup; use list_animals, get_animal, or list_identifiers instead.',
+      'DEPRECATED: Find or create an animal by EID (Electronic ID). This is a write-capable lookup: if no match exists it creates an animal. Never call it for a read-only identifier lookup; use lookup_animal_by_eid instead. For intentional creation use find_or_create_animal_by_eid.',
     inputSchema: {
       type: 'object',
       properties: {

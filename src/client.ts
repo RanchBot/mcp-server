@@ -233,8 +233,15 @@ export class RanchBotApiClient {
   }
 
   /**
-   * Find or create animal by EID
+   * Read an animal by exact EID without creating inventory
    */
+  async lookupAnimalByEid(farmId: string, eid: string) {
+    const response = await this.client.get(`/farm/${farmId}/animals/lookup-by-eid`, {
+      params: { eid },
+    });
+    return response.data;
+  }
+
   async findOrCreateAnimalByEid(farmId: string, eid: string) {
     const response = await this.client.post(`/farm/${farmId}/animals/find-or-create-by-eid`, {
       eid,

@@ -45,7 +45,9 @@ Use the reference that matches the task and the connected interface; read only t
 
 5. **Never create during a read.** CLI `animals find-by-eid` and MCP `find_animal_by_identifier`
    **find or create** an animal. Never call them for a read-only identifier lookup. Use the
-   supported list/get reads instead, and stop if no reliable read-only lookup is available.
+   read-only `animals lookup-by-eid` / `lookup_animal_by_eid` when available, or supported list/get
+   reads. Missing or ambiguous matches must not trigger creation. For approved creation use
+   `animals find-or-create-by-eid` / `find_or_create_animal_by_eid`. Stop if no reliable read is available.
 
 6. **Get concrete approval before every mutation.** Before any create, update, delete, identifier
    change, birth confirmation, export create, or export cancel, present the operation, the farm, the

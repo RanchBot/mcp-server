@@ -78,7 +78,11 @@ test('Release workflow validates before publishing and stays minimal', () => {
   assert.match(release, /environment: npm-release/);
   assert.match(release, /RELEASE_GITHUB_TOKEN/);
   assert.match(release, /npm install --global npm@11\.5\.1/);
-  assert.match(release, /npm publish/);
+  assert.match(
+    release,
+    /npm publish "\.\/candidate\/\$\{\{ needs\.candidate\.outputs\.filename \}\}"/,
+    'publish must pass the packed candidate as a file path (./), not a GitHub owner/repo shorthand',
+  );
   assert.match(release, /--provenance/);
   assert.match(release, /main\.mjs github-release/);
   assert.ok(!/NPM_TOKEN|NODE_AUTH_TOKEN/.test(release), 'trusted publishing must not use a token');

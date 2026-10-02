@@ -1,6 +1,6 @@
 {
   "name": "@ranchbot/mcp-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server for Ranch.Bot — livestock records for cattle and sheep operations, usable from Claude, Claude Code, and any MCP client.",
   "mcpName": "bot.ranch/mcp-server",
   "main": "dist/index.js",

@@ -29,6 +29,8 @@ export const toolRegistry: Record<string, string> = {
   create_animal: './tools/create_animal.js',
   update_animal: './tools/update_animal.js',
   delete_animal: './tools/delete_animal.js',
+  lookup_animal_by_eid: './tools/lookup_animal_by_eid.js',
+  find_or_create_animal_by_eid: './tools/find_or_create_animal_by_eid.js',
   find_animal_by_identifier: './tools/find_animal_by_identifier.js',
 
   // Identifier tools

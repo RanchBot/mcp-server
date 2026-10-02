@@ -21,6 +21,7 @@ const EXPECTED_TOOL_NAMES = [
   'delete_record',
   'farm_archive',
   'find_animal_by_identifier',
+  'find_or_create_animal_by_eid',
   'get_animal',
   'get_birth_event',
   'get_birth_history_evidence',
@@ -47,6 +48,7 @@ const EXPECTED_TOOL_NAMES = [
   'list_protocol_versions',
   'list_rations',
   'list_records',
+  'lookup_animal_by_eid',
   'preview_birth_event',
   'remove_identifier',
   'restore_group',
@@ -249,6 +251,7 @@ describe('createRanchBotServer', () => {
       'get_current_context',
       'list_pending_imports',
       'get_import_request',
+      'lookup_animal_by_eid',
       'preview_birth_event',
     ]) {
       expect(byName.get(name)?.annotations?.readOnlyHint).toBe(true);

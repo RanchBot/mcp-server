@@ -11,6 +11,7 @@ export function createMockClient(): jest.Mocked<RanchBotApiClient> {
     createAnimal: jest.fn(),
     updateAnimal: jest.fn(),
     deleteAnimal: jest.fn(),
+    lookupAnimalByEid: jest.fn(),
     findOrCreateAnimalByEid: jest.fn(),
     listAnimalIdentifiers: jest.fn(),
     addAnimalIdentifier: jest.fn(),
