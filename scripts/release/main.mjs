@@ -47,6 +47,7 @@ import {
   verifyRegistry,
   versionChecks,
 } from './release.mjs';
+import { assertTarballCoversDocuments } from './docs.mjs';
 import * as config from './config.mjs';
 
 const root = process.env.RELEASE_ROOT || process.cwd();
@@ -126,10 +127,9 @@ function checkVersions() {
 function checkTarball() {
   const packPath = process.env.PACK_RESULT || 'pack-result.json';
   const record = parsePackResult(readJson(packPath), config.packageName);
-  assertTarballAllowlist(
-    record.files.map((file) => file.path),
-    config.tarball,
-  );
+  const paths = record.files.map((file) => file.path);
+  assertTarballAllowlist(paths, config.tarball);
+  assertTarballCoversDocuments({ paths, requiredDocuments: config.requiredDocuments });
   const buffer = readFileSync(join(root, record.filename));
   const integrity = sha512Integrity(buffer);
   if (integrity !== record.integrity) {

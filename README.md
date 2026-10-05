@@ -21,7 +21,7 @@ never remove their active lock files.
 Then sign in from a terminal:
 
 ```bash
-npm install -g @ranchbot/mcp-server@0.1.3
+npm install -g @ranchbot/mcp-server@0.1.4
 ranchbot-mcp --version
 ranchbot-mcp login
 ```

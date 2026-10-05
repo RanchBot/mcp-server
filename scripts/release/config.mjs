@@ -12,17 +12,86 @@ export const binary = 'ranchbot-mcp';
 
 /** Runtime allowlist for the published tarball. `server.json` stays in the repo. */
 export const tarball = {
-  dirs: ['dist', 'skills'],
-  rootFiles: ['README.md', 'MAINTAINING.md', 'LICENSE'],
+  dirs: ['dist', 'docs', 'skills'],
+  rootFiles: ['README.md', 'MAINTAINING.md', 'CONTRIBUTING.md', 'SECURITY.md', 'LICENSE'],
   requiredRootFiles: [
     'README.md',
     'MAINTAINING.md',
+    'CONTRIBUTING.md',
+    'SECURITY.md',
     'LICENSE',
+    'docs/workflows.md',
+    'docs/architecture.md',
+    'docs/development.md',
+    'docs/troubleshooting.md',
     'dist/index.js',
     'dist/index.d.ts',
     'skills/ranchbot/SKILL.md',
   ],
 };
+
+/**
+ * Public Markdown documents whose links and heading fragments are validated.
+ * They must form a self-contained set: every relative target stays inside the
+ * package. The private PUBLISHING.md is deliberately not part of this scope.
+ */
+export const publicDocuments = [
+  'README.md',
+  'MAINTAINING.md',
+  'CONTRIBUTING.md',
+  'SECURITY.md',
+  'docs/workflows.md',
+  'docs/architecture.md',
+  'docs/development.md',
+  'docs/troubleshooting.md',
+  'skills/ranchbot/SKILL.md',
+  'skills/ranchbot/references/cli.md',
+  'skills/ranchbot/references/mcp.md',
+  'skills/ranchbot/references/birth-events.md',
+  'skills/ranchbot/references/exports.md',
+];
+
+/**
+ * Documents the README links to that must survive both the standalone source
+ * export and package assembly. A missing file fails the release tests instead
+ * of silently dropping a README target.
+ */
+export const requiredDocuments = [
+  'CONTRIBUTING.md',
+  'SECURITY.md',
+  'docs/workflows.md',
+  'docs/architecture.md',
+  'docs/development.md',
+  'docs/troubleshooting.md',
+];
+
+/**
+ * The explicit `git archive` source-export allowlist documented in
+ * PUBLISHING.md. Kept here so the release tests can prove every required
+ * document is exported while PUBLISHING.md stays the human-readable procedure.
+ */
+export const sourceExport = [
+  'mcp-server/src',
+  'mcp-server/scripts',
+  'mcp-server/.github',
+  'mcp-server/skills',
+  'mcp-server/package.json',
+  'mcp-server/package-lock.json',
+  'mcp-server/README.md',
+  'mcp-server/MAINTAINING.md',
+  'mcp-server/LICENSE',
+  'mcp-server/server.json',
+  'mcp-server/docs',
+  'mcp-server/CONTRIBUTING.md',
+  'mcp-server/SECURITY.md',
+  'mcp-server/tsconfig.json',
+  'mcp-server/tsconfig.build.json',
+  'mcp-server/jest.config.cjs',
+  'mcp-server/.eslintrc.json',
+  'mcp-server/.prettierrc',
+  'mcp-server/.prettierignore',
+  'mcp-server/.gitignore',
+];
 
 /**
  * Every declared version that must match the release tag or candidate. Runtime

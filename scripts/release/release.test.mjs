@@ -114,7 +114,13 @@ test('enforces the tarball runtime allowlist', () => {
     'package.json',
     'README.md',
     'MAINTAINING.md',
+    'CONTRIBUTING.md',
+    'SECURITY.md',
     'LICENSE',
+    'docs/workflows.md',
+    'docs/architecture.md',
+    'docs/development.md',
+    'docs/troubleshooting.md',
     'dist/index.js',
     'dist/index.d.ts',
     'skills/ranchbot/SKILL.md',
@@ -144,11 +150,21 @@ test('enforces the tarball runtime allowlist', () => {
   assert.throws(
     () =>
       assertTarballAllowlist(
-        ['package.json', 'README.md', 'MAINTAINING.md', 'LICENSE', 'dist/index.js'],
+        allowed.filter((path) => path !== 'dist/index.d.ts'),
         config.tarball,
       ),
     /missing dist\/index\.d\.ts/,
   );
+  for (const document of config.requiredDocuments) {
+    assert.throws(
+      () =>
+        assertTarballAllowlist(
+          allowed.filter((path) => path !== document),
+          config.tarball,
+        ),
+      new RegExp(`missing ${document.replace(/[/.]/g, '\\$&')}`),
+    );
+  }
 });
 
 test('computes SHA-512 SRI and validates it', () => {
@@ -785,11 +801,17 @@ test('local candidate checks pass without credentials or registry access', () =>
 
 test('package config checks MCP metadata and README pins', () => {
   assert.equal(config.repository, 'RanchBot/mcp-server');
-  assert.deepEqual(config.tarball.dirs, ['dist', 'skills']);
+  assert.deepEqual(config.tarball.dirs, ['dist', 'docs', 'skills']);
   assert.ok(
     config.tarball.requiredRootFiles.includes('skills/ranchbot/SKILL.md'),
     'the public agent skill must survive packing',
   );
+  for (const document of config.requiredDocuments) {
+    assert.ok(
+      config.tarball.requiredRootFiles.includes(document),
+      `${document} must survive packing`,
+    );
+  }
   const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
   const checks = config.extraVersionChecks(root);
   assert.equal(
