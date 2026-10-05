@@ -1,1 +1,1 @@
-export { getBirthEvent as handleTool } from './birthEventShared';
+export { getBirthEvent as handleTool } from './_shared/birthEventShared';

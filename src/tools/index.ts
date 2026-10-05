@@ -1,7 +1,7 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { generatedCrudTools } from '../generated/toolContracts.js';
-import { birthHistoryTools } from './birthHistoryTools';
-import { birthEventTools } from './birthEventTools';
+import { birthHistoryTools } from './_shared/birthHistoryTools';
+import { birthEventTools } from './_shared/birthEventTools';
 
 /**
  * MCP-only tools. The shared CRUD tools (animals/groups/records/identifiers) are generated from
@@ -229,5 +229,17 @@ const mcpOnlyTools: Tool[] = [
  * Register all available tools: the MCP-only tools plus the generated cross-surface CRUD tools.
  */
 export function registerTools(): Tool[] {
-  return [...mcpOnlyTools, ...generatedCrudTools, ...birthEventTools, ...birthHistoryTools];
+  return [...mcpOnlyTools, ...generatedCrudTools, ...birthEventTools, ...birthHistoryTools].map(
+    (tool) => {
+      if (tool.annotations?.readOnlyHint === true || tool.name === 'set_default_farm') return tool;
+      return {
+        ...tool,
+        description:
+          tool.description +
+          ' Ordinary farm-data writes save directly without the app confirmation screen or its Change History. ' +
+          'Review the farm, targets and values before authorizing a write. ' +
+          'If the outcome is uncertain, reconcile with reads before retrying.',
+      };
+    },
+  );
 }

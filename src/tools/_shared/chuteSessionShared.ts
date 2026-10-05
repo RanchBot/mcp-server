@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RanchBotApiClient } from '../client';
+import { RanchBotApiClient } from '../../client';
 
 /** Widget shape mirroring api/src/lib/chuteConfig.ts (the API re-validates strictly). */
 export const widgetSchema = z.object({

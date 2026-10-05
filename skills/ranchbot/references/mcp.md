@@ -6,10 +6,14 @@ access to a farm.
 
 ## Connect
 
-The verified public pin is MCP server `0.1.0`. Install and sign in once in a terminal:
+The verified public pin is MCP server `0.1.2`. Install and sign in once in a terminal:
+
+This is the accepted-pin snapshot checked on 2026-10-02. The package containing this skill may be
+an unreleased candidate newer than this pin. Check [current MCP setup](https://ranch.bot/docs/mcp-setup)
+before installing or upgrading; do not automatically downgrade an existing installation.
 
 ```bash
-npm install -g @ranchbot/mcp-server@0.1.0
+npm install -g @ranchbot/mcp-server@0.1.2
 ranchbot-mcp login
 ranchbot-mcp --help
 ```

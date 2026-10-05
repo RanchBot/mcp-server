@@ -190,6 +190,48 @@ jobs:
           RELEASE_INTEGRITY: ${{ needs.candidate.outputs.integrity }}
         run: node scripts/release/main.mjs verify-registry
 
+  mcp-registry:
+    name: Publish to MCP Registry
+    needs: [validate, candidate, publish]
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm-release
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+
+      - name: Node setup
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install the pinned MCP Registry publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.1
+          MCP_PUBLISHER_ASSET: mcp-publisher_linux_amd64.tar.gz
+          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/${MCP_PUBLISHER_ASSET}" -o "$MCP_PUBLISHER_ASSET"
+          printf '%s  %s\n' "$MCP_PUBLISHER_SHA256" "$MCP_PUBLISHER_ASSET" | sha256sum --check --strict
+          tar -xzf "$MCP_PUBLISHER_ASSET" mcp-publisher
+          mkdir -p "$HOME/.local/bin"
+          install -m 0755 mcp-publisher "$HOME/.local/bin/mcp-publisher"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Publish or verify the MCP Registry entry
+        env:
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+          MCP_REGISTRY_RELEASE_ENABLED: ${{ vars.MCP_REGISTRY_RELEASE_ENABLED }}
+          MCP_DNS_PRIVATE_KEY: ${{ secrets.MCP_DNS_PRIVATE_KEY }}
+        run: node scripts/release/main.mjs registry-publish
+
   github-release:
     name: Create GitHub release
     needs: [validate, candidate, publish]

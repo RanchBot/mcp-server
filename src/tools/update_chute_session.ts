@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { RanchBotApiClient } from '../client';
-import { resolveGroupIdByName, widgetSchema } from './chuteSessionShared';
+import { resolveGroupIdByName, widgetSchema } from './_shared/chuteSessionShared';
 
 const argsSchema = z.object({
   farm_id: z.string().optional(),

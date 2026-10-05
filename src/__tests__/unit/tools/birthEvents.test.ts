@@ -1,7 +1,7 @@
 import { RanchBotApiClient } from '../../../client';
 import { getToolHandlerPath } from '../../../toolRegistry';
-import { birthEventTools } from '../../../tools/birthEventTools';
-import * as tools from '../../../tools/birthEventShared';
+import { birthEventTools } from '../../../tools/_shared/birthEventTools';
+import * as tools from '../../../tools/_shared/birthEventShared';
 import { registerTools } from '../../../tools';
 
 const farmId = '11111111-1111-4111-8111-111111111111';
@@ -21,7 +21,10 @@ const client = () =>
 describe('birth event MCP tools', () => {
   it('registers a callable handler for every advertised birth operation', async () => {
     for (const tool of birthEventTools) {
-      expect(registerTools()).toContainEqual(tool);
+      expect(registerTools()).toContainEqual({
+        ...tool,
+        description: expect.stringContaining(tool.description!),
+      });
       expect(getToolHandlerPath(tool.name)).toBe(`./tools/${tool.name}.js`);
       const handler = await import(`../../../tools/${tool.name}`);
       expect(typeof handler.handleTool).toBe('function');

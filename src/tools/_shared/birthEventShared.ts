@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RanchBotApiClient } from '../client';
+import { RanchBotApiClient } from '../../client';
 
 const farmField = { farm_id: z.string().uuid().optional() };
 const pageSchema = z.object({

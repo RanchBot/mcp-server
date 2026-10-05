@@ -14,10 +14,12 @@ import {
   assertValidManifest,
   assertVersionAlignment,
   buildReleaseManifest,
+  classifyMcpRegistryView,
   classifyNpmView,
   compareManifests,
   findPackagePins,
   gitHubReleasePlan,
+  mcpRegistryDecision,
   parseManifest,
   parsePackResult,
   parseStableTag,
@@ -28,6 +30,7 @@ import {
   renderReleaseNotes,
   serverJsonVersionChecks,
   sha512Integrity,
+  verifyMcpRegistryEntry,
   verifyRegistry,
   versionChecks,
 } from './release.mjs';
@@ -110,6 +113,7 @@ test('enforces the tarball runtime allowlist', () => {
   const allowed = [
     'package.json',
     'README.md',
+    'MAINTAINING.md',
     'LICENSE',
     'dist/index.js',
     'dist/index.d.ts',
@@ -140,7 +144,7 @@ test('enforces the tarball runtime allowlist', () => {
   assert.throws(
     () =>
       assertTarballAllowlist(
-        ['package.json', 'README.md', 'LICENSE', 'dist/index.js'],
+        ['package.json', 'README.md', 'MAINTAINING.md', 'LICENSE', 'dist/index.js'],
         config.tarball,
       ),
     /missing dist\/index\.d\.ts/,
@@ -695,7 +699,7 @@ test('packaged README pins must be present, explicit, and matched', () => {
     /must pin @ranchbot\/cli/,
   );
 
-  // A README with no own-package pins is allowed when not required (MCP).
+  // The generic helper permits no pins only when the caller opts out.
   assert.deepEqual(
     pinnedReferenceChecks({ text: 'plain README', packageName: '@ranchbot/mcp-server' }),
     [],
@@ -788,8 +792,135 @@ test('package config checks MCP metadata and README pins', () => {
   );
   const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
   const checks = config.extraVersionChecks(root);
-  assert.equal(checks.length, 2, 'server.json version and npm package entry are checked');
+  assert.equal(
+    checks.length,
+    3,
+    'server.json, npm package entry and README install pin are checked',
+  );
   for (const check of checks) {
     assert.equal(check.value, version, `${check.label} must match package.json`);
   }
+});
+
+const mcpRegistryResponse = (server = {}) => ({
+  servers: [
+    {
+      server: {
+        name: 'bot.ranch/mcp-server',
+        version: '0.1.2',
+        packages: [
+          {
+            registryType: 'npm',
+            identifier: '@ranchbot/mcp-server',
+            transport: { type: 'stdio' },
+          },
+        ],
+        ...server,
+      },
+      _meta: { 'io.modelcontextprotocol.registry/official': { isLatest: true } },
+    },
+  ],
+});
+
+test('package config pins the MCP Registry publisher and secret', () => {
+  assert.equal(config.mcpRegistry.serverName, 'bot.ranch/mcp-server');
+  assert.equal(config.mcpRegistry.domain, 'ranch.bot');
+  assert.equal(config.mcpRegistry.enabledVariable, 'MCP_REGISTRY_RELEASE_ENABLED');
+  assert.equal(config.mcpRegistry.privateKeySecret, 'MCP_DNS_PRIVATE_KEY');
+  assert.match(config.mcpRegistry.publisherSha256, /^[a-f0-9]{64}$/);
+});
+
+test('classifies and decides on the MCP Registry entry', () => {
+  const name = 'bot.ranch/mcp-server';
+  const present = classifyMcpRegistryView({ name, version: '0.1.2', json: mcpRegistryResponse() });
+  assert.deepEqual(present, {
+    exists: true,
+    data: {
+      name,
+      version: '0.1.2',
+      npm: '@ranchbot/mcp-server',
+      transport: 'stdio',
+      isLatest: true,
+    },
+  });
+  assert.deepEqual(
+    classifyMcpRegistryView({ name, version: '9.9.9', json: mcpRegistryResponse() }),
+    { exists: false },
+  );
+  assert.deepEqual(
+    mcpRegistryDecision({
+      version: '0.1.2',
+      view: { exists: false },
+      serverName: name,
+      packageName: '@ranchbot/mcp-server',
+    }),
+    { publish: true, reason: 'version is not published yet' },
+  );
+  assert.deepEqual(
+    mcpRegistryDecision({
+      version: '0.1.2',
+      view: present,
+      serverName: name,
+      packageName: '@ranchbot/mcp-server',
+    }),
+    { publish: false, reason: 'already published with the expected metadata' },
+  );
+  const wrongNpm = classifyMcpRegistryView({
+    name,
+    version: '0.1.2',
+    json: mcpRegistryResponse({
+      packages: [
+        {
+          registryType: 'npm',
+          identifier: '@ranchbot/other',
+          transport: { type: 'stdio' },
+        },
+      ],
+    }),
+  });
+  assert.throws(
+    () =>
+      mcpRegistryDecision({
+        version: '0.1.2',
+        view: wrongNpm,
+        serverName: name,
+        packageName: '@ranchbot/mcp-server',
+      }),
+    /uses npm "@ranchbot\/other"/,
+  );
+  assert.throws(
+    () => classifyMcpRegistryView({ name, version: '0.1.2', json: { metadata: {} } }),
+    /no server list/,
+  );
+});
+
+test('verifies the MCP Registry entry with bounded retries', async () => {
+  const name = 'bot.ranch/mcp-server';
+  const present = () =>
+    classifyMcpRegistryView({ name, version: '0.1.2', json: mcpRegistryResponse() });
+  const reads = [];
+  const result = await verifyMcpRegistryEntry({
+    version: '0.1.2',
+    serverName: name,
+    packageName: '@ranchbot/mcp-server',
+    read: () => {
+      reads.push(reads.length + 1);
+      return reads.length < 3 ? { exists: false } : present();
+    },
+    sleep: () => Promise.resolve(),
+  });
+  assert.deepEqual(result, { verified: true, attempts: 3, intervalMs: 10000 });
+  assert.deepEqual(reads, [1, 2, 3]);
+  await assert.rejects(
+    () =>
+      verifyMcpRegistryEntry({
+        version: '0.1.2',
+        serverName: name,
+        packageName: '@ranchbot/mcp-server',
+        read: () => ({ exists: false }),
+        sleep: () => Promise.resolve(),
+        attempts: 2,
+      }),
+    /not visible after 2 checked attempt/,
+  );
 });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { RanchBotApiClient } from '../client';
-import { ANIMAL_PROFILE_FIELDS, packAnimalProfileFields } from './animalProfile';
+import { ANIMAL_PROFILE_FIELDS, packAnimalProfileFields } from './_shared/animalProfile';
 
 // The described profile fields the model fills (the generated tool schema advertises these). The
 // handler packs them into canonical metadata keys and merges any raw `metadata` over them.

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RanchBotApiClient } from '../client';
+import { RanchBotApiClient } from '../../client';
 
 const argsSchema = z.object({ farm_id: z.string().uuid().optional() });
 const farm = (explicit: string | undefined, fallback: string) =>

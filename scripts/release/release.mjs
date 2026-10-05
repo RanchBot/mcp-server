@@ -501,6 +501,107 @@ export async function verifyRegistry({
 }
 
 /**
+ * Classify one MCP Registry search response. A version is present only when the
+ * exact server name and version appear in the result list.
+ */
+export function classifyMcpRegistryView({ name, version, json }) {
+  if (!json || !Array.isArray(json.servers)) {
+    throw new Error('MCP Registry returned no server list');
+  }
+  const match = json.servers.find(
+    (entry) => entry?.server?.name === name && entry?.server?.version === version,
+  );
+  if (!match) return { exists: false };
+  const server = match.server;
+  const pkg = (server.packages ?? []).find((entry) => entry?.registryType === 'npm');
+  const official =
+    match._meta?.['io.modelcontextprotocol.registry/official'] ??
+    match.meta?.['io.modelcontextprotocol.registry/official'];
+  return {
+    exists: true,
+    data: {
+      name: server.name,
+      version: server.version,
+      npm: pkg?.identifier,
+      transport: pkg?.transport?.type,
+      isLatest: Boolean(official?.isLatest),
+    },
+  };
+}
+
+/**
+ * Decide what to do with an existing MCP Registry version. Returns
+ * `{ publish: true }` only when the version is absent; an existing version is
+ * accepted only when its npm identifier and transport match the expected
+ * package. Never signals an overwrite.
+ */
+export function mcpRegistryDecision({
+  version,
+  view,
+  serverName,
+  packageName,
+  transport = 'stdio',
+}) {
+  assertStableVersion(version);
+  if (view?.exists === false) return { publish: true, reason: 'version is not published yet' };
+  const data = view?.data ?? {};
+  if (data.name !== serverName || data.version !== version) {
+    throw new Error(
+      `MCP Registry returned ${JSON.stringify(data.name)}@${JSON.stringify(data.version)}, ` +
+        `expected ${serverName}@${version}`,
+    );
+  }
+  if (data.npm !== packageName) {
+    throw new Error(
+      `MCP Registry entry ${serverName}@${version} uses npm ${JSON.stringify(data.npm)}, ` +
+        `expected ${packageName}`,
+    );
+  }
+  if (data.transport !== transport) {
+    throw new Error(
+      `MCP Registry entry ${serverName}@${version} transport is ` +
+        `${JSON.stringify(data.transport)}, expected ${transport}`,
+    );
+  }
+  return { publish: false, reason: 'already published with the expected metadata' };
+}
+
+/**
+ * Strict MCP Registry read-back after publish. Retries only while the exact
+ * version is absent; malformed or mismatched metadata fails immediately, and
+ * exhausting the retries fails nonzero instead of reporting success.
+ */
+export async function verifyMcpRegistryEntry({
+  version,
+  read,
+  serverName,
+  packageName,
+  transport = 'stdio',
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  attempts = 6,
+  intervalMs = 10000,
+}) {
+  assertStableVersion(version);
+  if (typeof read !== 'function')
+    throw new Error('verifyMcpRegistryEntry requires a read function');
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new Error(`MCP Registry attempts must be a positive integer, received ${attempts}`);
+  }
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const view = await read();
+    if (view?.exists) {
+      mcpRegistryDecision({ version, view, serverName, packageName, transport });
+      return { verified: true, attempts: attempt, intervalMs };
+    }
+    if (attempt < attempts) await sleep(intervalMs);
+  }
+  throw new Error(
+    `MCP Registry version ${version} was not visible after ${attempts} checked attempt(s); ` +
+      'refusing to report a successful publication',
+  );
+}
+
+/**
  * Assert an existing release belongs to this tag and source commit. A branch
  * target is allowed; an explicit commit target must equal the tested SHA.
  */

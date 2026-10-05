@@ -99,6 +99,36 @@ Use the reference that matches the task and the connected interface; read only t
 - "Set up my agent" → the user installs the CLI or MCP server and signs in; this skill never grants
   access, and an already-connected MCP client needs no local install.
 
+## Mixed-source reconciliation
+
+For an authorized source folder or a report combining farm records with external evidence:
+
+- Inventory each source item as **proposed**, **already matched**, **duplicate**, **unresolved**, or
+  **explicitly excluded**. Keep original wording and file/sheet/page/row (or note/message locator),
+  event date, document date, matched IDs and exclusion reasons in a ledger beside the source files.
+  Duplicate copies reference the same fact; they are not independent confirmation. This ledger is
+  assistant work, not an automatically persisted Ranch.Bot feature.
+- Match across relevant historical inventory before proposing new animals. Tags/names can be reused;
+  they are not unique keys. Ask about ambiguous identities or event dates before dependent writes.
+  A document's creation date does not establish the date of the livestock event.
+- Treat lender/AgriStability totals as dated aggregate evidence. Compare equivalent populations and
+  dates in a read-only report. Never manufacture individual animals, current inventory status or
+  current group membership from totals or old lambing sheets. Where supported, use `UNKNOWN` for an
+  approved historical animal whose present status is unverified; do not silently accept `CURRENT`.
+- Enumerate exact creates/updates and existing targets, including relationships and dates. Preserve
+  provenance in supported descriptions when appropriate and in the ledger; never invent payload
+  fields. Already-matched and duplicate items require no write. Unresolved items stay pending unless
+  the user explicitly excludes them; approving a subset does not complete the folder.
+- Births require the dedicated preview/confirmation workflow. Its offspring are newly created;
+  it does not accept existing offspring IDs or historical offspring inventory statuses. If those
+  constraints prevent faithful reconciliation, stop that item and explain the limitation. Do not
+  substitute generic CRUD, forge source IDs, or re-record an already saved birth.
+- After approval, read back each saved ID, values and links; record verified outcomes separately
+  from proposed operations. On failure, stop the batch, list completed/unattempted/uncertain items,
+  and read before deciding what remains. A lost response does not prove failure; generic CRUD has
+  no universal idempotent retry. If reads cannot resolve the outcome, seek support rather than
+  replaying. Unsupported commands/tools stay unresolved; never switch surfaces to bypass a denial.
+
 ## Safety and control
 
 - Never ask the user to paste a password, API key, OAuth token, or private farm file into chat.

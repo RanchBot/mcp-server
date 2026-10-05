@@ -1,1 +1,1 @@
-export { getBirthHistoryEvidence as handleTool } from './birthHistoryShared';
+export { getBirthHistoryEvidence as handleTool } from './_shared/birthHistoryShared';

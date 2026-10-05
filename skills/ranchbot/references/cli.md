@@ -6,17 +6,20 @@ already-connected MCP client does not need the CLI.
 
 ## Install and sign in
 
-The verified public pin is CLI `1.0.0`. Newer source versions may exist in the repository but are
-not verified public releases.
+The verified public pin is CLI `1.1.2`.
+
+This is the accepted-pin snapshot checked on 2026-10-02. The package containing this skill may be
+an unreleased candidate newer than this pin. Check [current CLI setup](https://ranch.bot/docs/cli-setup)
+before installing or upgrading; do not automatically downgrade an existing installation.
 
 ```bash
-npm install -g @ranchbot/cli@1.0.0
+npm install -g @ranchbot/cli@1.1.2
 ranchbot --version
 ranchbot --help
 ranchbot login
 ```
 
-Without a global install, replace `ranchbot` with `npx -y @ranchbot/cli@1.0.0`. `--version` and
+Without a global install, replace `ranchbot` with `npx -y @ranchbot/cli@1.1.2`. `--version` and
 `--help` work without signing in.
 
 `ranchbot login` prints a URL and code. The user opens the URL in a browser and approves the code.
@@ -61,8 +64,9 @@ Auth-shaped failures tell the user to run `ranchbot login`. A missing farm tells
 
 ## Pagination, inventory, and files
 
-- `--skip <n>` and `--take <n>` page list commands. Read returned totals and continue until the task
-  is covered; report incomplete retrieval honestly.
+- Use `--skip <n>` and `--take <n>` only on list commands that expose them (for example, animals
+  and records; not groups). Read returned totals and continue until the task is covered; report
+  incomplete retrieval honestly.
 - `animals list` defaults to current inventory. Use `--inventory-status CURRENT`, `UNKNOWN`, `SOLD`,
   `DECEASED`, or `ALL`. `ALL` includes historical statuses where the API supports them, but not
   deleted profiles.

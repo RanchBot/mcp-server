@@ -1,6 +1,6 @@
 name: CI
 
-# Self-contained checks for the standalone @ranchbot/cli repository. This
+# Self-contained checks for the standalone @ranchbot/mcp-server repository. This
 # workflow is also the reusable validation entrypoint called by release.yml
 # against the exact tagged commit.
 on:

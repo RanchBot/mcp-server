@@ -125,6 +125,18 @@ test('Release workflow validates before publishing and stays minimal', () => {
       `GitHub release must receive the expected ${flag}`,
     );
   }
+
+  // The MCP Registry job runs after npm publication, is gated on the DNS
+  // secret and flag, and never requests an OIDC token.
+  assert.ok(jobs['mcp-registry'], 'release workflow is missing the mcp-registry job');
+  assert.match(jobs['mcp-registry'], /needs: \[validate, candidate, publish\]/);
+  assert.match(jobs['mcp-registry'], /if: needs\.publish\.result == 'success'/);
+  assert.match(jobs['mcp-registry'], /MCP_REGISTRY_RELEASE_ENABLED/);
+  assert.match(jobs['mcp-registry'], /secrets\.MCP_DNS_PRIVATE_KEY/);
+  assert.match(jobs['mcp-registry'], /sha256sum --check/);
+  assert.match(jobs['mcp-registry'], /main\.mjs registry-publish/);
+  assert.ok(!/id-token/.test(jobs['mcp-registry']), 'mcp-registry must not request an OIDC token');
+
   const main = readFileSync(join(root, 'scripts/release/main.mjs'), 'utf8');
   assert.match(main, /ranchbot-dev/, 'GitHub release identity must be ranchbot-dev');
 });

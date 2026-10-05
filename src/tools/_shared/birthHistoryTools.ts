@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { birthHistorySettingsJsonSchema } from '../generated/birthHistorySchema';
+import { birthHistorySettingsJsonSchema } from '../../generated/birthHistorySchema';
 
 const farm = {
   farm_id: {

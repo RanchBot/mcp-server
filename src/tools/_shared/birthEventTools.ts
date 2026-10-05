@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { birthBundleInputSchema } from '../generated/birthBundleSchema';
+import { birthBundleInputSchema } from '../../generated/birthBundleSchema';
 
 const farm = { farm_id: { type: 'string', format: 'uuid' } };
 const page = {

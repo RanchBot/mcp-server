@@ -1,167 +1,97 @@
 # Ranch.Bot MCP Server
 
-Work with cattle and sheep records from a local stdio MCP client. Requires Node.js 22 or newer,
-a Ranch.Bot account and access to a farm. Ranch.Bot does not operate a hosted MCP endpoint.
+Work with cattle and sheep records from a local stdio MCP client. The server exposes one farm's
+livestock records at a time to an external assistant. You need Node.js 22 or newer, a Ranch.Bot
+account and access to a farm. Ranch.Bot does not operate a hosted MCP endpoint.
 
-## Release availability
+## Requirements
 
-Check [the release and setup page](https://ranch.bot/connect-your-ai) for verified public versions.
-A source checkout or candidate is not evidence that a version is available on npm or in the Registry.
-The public CLI has separate [setup instructions](https://ranch.bot/docs/cli-setup).
-For everyday records, use [SMS and web setup](https://ranch.bot/docs/getting-started).
+- **Node.js 22 or newer.**
+- A Ranch.Bot account with access to at least one farm.
+- A local MCP client that can launch a stdio server. The configuration below is generic stdio; this
+  README does not claim compatibility with any particular assistant.
 
-## Terminal commands
+## Install and sign in
 
-With the installed `ranchbot-mcp` command, run `ranchbot-mcp login` in a terminal and approve the
-URL and code in your browser. Configure your local MCP client to run `ranchbot-mcp` with no arguments.
-Use an absolute executable path if the client does not inherit your terminal PATH.
-`ranchbot-mcp --help` and `ranchbot-mcp --version` require no authentication.
-Run `ranchbot-mcp logout` to revoke the session before removing its local credentials.
+Use the pinned install command on the public setup page. It is the source of truth for the verified
+release: <https://ranch.bot/docs/mcp-setup>. The commands below describe this package version; a
+source candidate is not a published release. Stop older CLI and MCP processes before upgrading;
+never remove their active lock files.
 
-## Source development
-
-Requires Node.js 22 or newer and an authorized Ranch.Bot development environment.
+Then sign in from a terminal:
 
 ```bash
-npm install
-npm run build
-npm test
+npm install -g @ranchbot/mcp-server@0.1.3
+ranchbot-mcp --version
+ranchbot-mcp login
 ```
 
-Run the stdio entry directly from a local MCP client:
+Open the URL printed in the terminal, sign in, and explicitly approve the displayed code and
+requested access. No API key is needed. If login expires, run `ranchbot-mcp login` again. Keep
+passwords and token files out of assistant messages.
 
-```text
-node /absolute/path/to/mcp-server/dist/index.js
-```
-
-Set these environment variables for the development environment:
-
-| Variable                   | Required state                           | Purpose                                 |
-| -------------------------- | ---------------------------------------- | --------------------------------------- |
-| `RANCHBOT_API_URL`         | Explicit development API URL             | Ranch.Bot API used by the source server |
-| `COGNITO_DEVICE_CLIENT_ID` | Explicit public development OAuth client | Device-flow registration for that API   |
-| `API_VERSION`              | Optional, defaults to `v1`               | API version                             |
-
-The default is the stable public client `ranchbot-mcp`. Deploy its database migration before
-using cloud authentication. A local API URL alone does not select installation-local accounts.
-
-Development watch mode:
-
-```bash
-npm run dev
-```
-
-## Local client configuration
-
-A source checkout can point an MCP client at the built file. Example shape:
+Point your MCP client at the installed command with no arguments:
 
 ```json
 {
   "mcpServers": {
-    "ranchbot-development": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-server/dist/index.js"],
-      "env": {
-        "RANCHBOT_API_URL": "http://localhost:7001",
-        "COGNITO_DEVICE_CLIENT_ID": "development-public-client-id"
-      }
-    }
+    "ranchbot": { "command": "ranchbot-mcp", "args": [] }
   }
 }
 ```
 
-Use a real public OAuth client from the development environment. Never commit API keys, OAuth
-tokens, or secret-bearing client registrations.
+If the client does not inherit your terminal `PATH`, use the absolute path to `ranchbot-mcp`.
+Restart the client after changing configuration. `ranchbot-mcp --help` and `ranchbot-mcp --version`
+work without authentication. This generic configuration makes no individual client compatibility
+promise.
 
-## Agent skill
+## First successful read
 
-The package ships the same public Agent Skill bundle as the CLI at `skills/ranchbot` (`SKILL.md`
-plus `references/`). It teaches an agent task selection, approvals, multi-step workflows, and
-recovery; it is optional guidance, not a capability or a security boundary.
+Ask your assistant to run these three reads in order:
 
-Once the public repository contains the bundle, install it with the Agent Skills installer:
+1. `list_my_farms` with `{}`: returns the farms the account can access. Note the ID of the farm you
+   want.
+2. `set_default_farm` with `{"farm_id":"<farm_id>"}`: saves the working farm for later calls. You
+   can also pass an explicit `farm_id` on any scoped call instead.
+3. `list_animals` with `{}`: returns the selected farm's current animals. An empty list is a
+   successful read.
 
-```bash
-npx skills add RanchBot/mcp-server --skill ranchbot
-```
+If more than one farm is plausible and the producer did not name one, ask instead of guessing. If a
+call reports that a farm is required, repeat `list_my_farms` and select a farm. If access is denied,
+check the account and farm membership; missing authentication requires terminal login, then retry the
+read. Tool calls never start browser approval. A different account clears the process's default farm.
 
-The CLI ships the same bundle and offers the equivalent route:
-`npx skills add RanchBot/cli --skill ranchbot`. Install **one** copy, inspect the source, and choose
-the agent/project scope your installer offers; you can also copy the entire `ranchbot` folder into a
-skill directory your host supports. The installer is third-party tooling and may emit its own
-telemetry and directory discovery; installing a skill promises no listing or ranking benefit. It
-does not install `ranchbot-mcp`, configure your MCP client, authenticate you, or authorize farm
-operations.
+## Workflows
 
-## Authentication
+Three workflows cover the common work. Full steps, required inputs, and recovery rules are in
+[Workflows](https://github.com/RanchBot/mcp-server/blob/main/docs/workflows.md).
 
-The stdio transport uses Ranch.Bot's OAuth device flow. Run `node dist/index.js login` in a
-terminal before connecting your MCP client. Visit the displayed URL and explicitly approve browser
-access. Tool calls without a session return terminal-login instructions and do not start login.
-`node dist/index.js logout` revokes the session before clearing the cache; failed revocation retains
-credentials for a retry. `--help` and `--version` work without authentication. No arguments starts stdio.
+- **Find an animal and read its records.** `lookup_animal_by_eid` performs a read-only exact EID
+  lookup and never creates inventory. For a tag or name, use `list_animals` and `list_identifiers`,
+  then `get_animal` and `list_records`. If a lookup is ambiguous, ask which animal is meant.
+- **Review, create, and read back an ordinary record.** Resolve and verify every intended animal or
+  group in the selected farm before approval. Show the producer the name, type, date, attachments,
+  and description, get explicit approval, call `create_record`, then read back the returned UUID
+  with `get_record` and compare all values and attachment IDs. The API rejects the request when both
+  attachment arrays are empty, but it keeps only active, in-farm targets: an invalid target is
+  dropped, so a partially valid create can save a subset and an entirely invalid one can produce a
+  record that no farm-scoped read can retrieve. `list_records` is not enough to verify attachments.
+  If the read-back fails or the attachments differ, stop and contact support. Do not assume nothing
+  was saved and do not recreate the record.
+- **Preview and confirm a birth.** `preview_birth_event` validates a birth bundle without saving it
+  and returns a confirmation hash. Show every field, get explicit approval, then call
+  `confirm_birth_event` with the exact `request_id`, `bundle`, and `confirmation_hash`. A changed
+  proposal needs a fresh preview and renewed approval.
 
-Ordinary login requests `read:farms`, read/write animals, groups and records, and `read:exports`.
-Use `list_my_farms` then `set_default_farm`, or supply an explicit `farm_id`, before farm operations.
-A replacement session for a different principal clears the in-process farm selection. Tokens are cached locally in `~/.ranchbot-mcp-tokens.json` with restricted file
-permissions and refresh when the configured environment supports it.
-
-The optional self-hosted HTTP transport uses bearer API-key auth for development compatibility. API
-keys are deprecated and are not part of customer onboarding.
-
-### Admin import sign-in
-
-For internal concierge imports, add `--admin` to the stdio command (or to the local client's
-`args` array):
-
-```text
-node /absolute/path/to/mcp-server/dist/index.js --admin
-```
-
-This selects the named `ranchbot-admin-cli` client and requests `admin:imports` alongside the
-eight ordinary scopes. It overrides `COGNITO_DEVICE_CLIENT_ID`; explicitly setting that variable
-to `ranchbot-admin-cli` also selects admin mode. The API must have that client registration, and
-an admin account must approve the displayed device code in the browser.
-
-Admin sessions use `~/.ranchbot-mcp-admin-tokens.json` and a separate persistent
-`~/.ranchbot-mcp-admin-tokens.lock`. Ordinary sessions retain their existing cache and lock.
-Run `node dist/index.js login --admin` before using admin mode;
-admin refresh and sign-in do not replace the ordinary session.
-
-The `list_pending_imports`, `get_import_request`, and `update_import_request_status` tools require
-this admin session. Ordinary device sessions and the HTTP transport's API keys cannot use them.
-The API checks both the import capability and current admin status on every request.
+These examples describe the current source server. The public setup page is the source of truth for
+what a published release contains; describing a capability here is not a claim that it is released or
+deployed.
 
 ## Tool surface
 
-The source server exposes farm-scoped tools for:
-
-- farms and current farm context;
-- animals and identifiers;
-- groups;
-- health, movement, feed, genetic, and other records;
-- atomic birth events, linked follow-up tasks, and immutable farm protocol versions; and
-- read-only Farm Memory.
-
-External MCP writes execute through the MCP client's granted access. They do not use the Ranch.Bot
-app's review-before-saving screen. Ordinary CRUD tools call the farm endpoints and do not create the
-Action rows that back Change History today. The source guarantees to preserve are farm scope and
-revocation.
-
-`preview_birth_event` returns the complete birth bundle, resolved evidence, and a confirmation hash
-without saving farm data. Show every field to the producer and obtain explicit approval before
-`confirm_birth_event`, preserving the exact `request_id`, `bundle`, and `confirmation_hash`.
-Confirmation requires EDITOR access and `write:records`, `write:animals`, and `write:groups` scopes.
-
-Before confirmation only, changes to an unconfirmed proposal or its referenced evidence require
-a fresh preview and renewed producer approval. An unchanged retry of the exact approved tuple
-returns the already-saved event; it is not a correction. If a confirmation outcome is uncertain,
-reconcile with reads before any further write.
-
-Saved birth correction is not currently supported. To correct a saved birth, stop and refer the
-producer to https://ranch.bot/support. Do not promise an amendment. Never re-record a saved birth
-through a new preview/confirmation, a new `request_id`, stripped or forged source provenance, or
-generic animal, record, or task edits, even with producer approval.
+The server exposes farm-scoped tools for farms and current farm context; animals and identifiers;
+groups; health, movement, feed, genetic, and other records; atomic birth events, linked follow-up
+tasks, and immutable farm protocol versions; and read-only Farm Memory.
 
 `list_birth_events` and `get_birth_event` retrieve saved events; `list_farm_tasks` includes undated
 TODOs, and `update_farm_task` changes status or the optional due date. `list_protocol_versions` and
@@ -171,65 +101,144 @@ TODOs, and `update_farm_task` changes status or the optional due date. `list_pro
 identity candidates. It requires `read:records`, `read:animals`, and current farm access. Partial or
 ambiguous matches require producer selection before birth confirmation.
 
-## Checks
+## Write and access boundaries
+
+External MCP writes execute directly under the server's granted access. They **bypass the Ranch.Bot
+app's review-before-saving screen** and **do not create the Action rows behind Change History**.
+Verify every write by reading it back. Review the operation, farm, resolved targets, exact values,
+and consequences with the producer, and obtain explicit approval before any write.
+
+- **Roles and scopes both apply.** Readers can read, including the safe `lookup_animal_by_eid`.
+  Editors or Owners can run the applicable create and update operations and confirm a birth.
+  Deleting animals, groups, records, or identifiers needs Owner access. Birth confirmation also
+  needs the `write:records`, `write:animals`, and `write:groups` scopes. Required OAuth scopes are an
+  additional condition on top of the farm role, so a missing scope and a missing role are separate
+  problems.
+- **Never automatically replay a write.** If a write times out or its result is unclear, stop and
+  reconcile with reads before proposing anything else.
+- **Safe lookup before creation.** `lookup_animal_by_eid` is read-only. `find_or_create_animal_by_eid`
+  and the deprecated `find_animal_by_identifier` create inventory on a miss and require explicit
+  intent to create.
+
+### Birth safety
+
+Before confirmation only, changes to an unconfirmed proposal or its referenced evidence require a
+fresh preview and renewed producer approval. An unchanged retry of the exact approved tuple returns
+the already-saved event; it is not a correction. If a confirmation outcome is uncertain, reconcile
+with reads before any further write.
+
+Saved birth correction is not currently supported. To correct a saved birth, stop and refer the
+producer to https://ranch.bot/support. Do not promise an amendment. Never re-record a saved birth
+through a new preview/confirmation, a new `request_id`, stripped or forged source provenance, or
+generic animal, record, or task edits, even with producer approval.
+
+See [Architecture](https://github.com/RanchBot/mcp-server/blob/main/docs/architecture.md) for which
+component enforces each guarantee.
+
+## Jobs for an external assistant
+
+A producer can authorize a local assistant to reconcile years of lambing spreadsheets, iPhone
+notes, messages and livestock PDFs against a selected farm. Existing operator preparation of
+records motivates these examples; customer demand and model accuracy remain unmeasured. MCP
+provides structured farm operations, not a call to Ranch.Bot's conversation loop.
+
+- **Historical reconciliation:** match existing animals and births, explain conflicts, and enumerate
+  exact missing records before asking the producer to approve only the listed changes.
+- **Custom reports:** read the relevant inventory and history, then report dated findings with saved
+  IDs and missing evidence made explicit.
+- **Combined evidence:** compare farm history with an authorized lender or AgriStability inventory
+  snapshot for the same population and date. Totals are aggregate evidence, not individual animals
+  or proof of current group membership; this is livestock reconciliation, not financial advice.
+
+Inspect the connected tool list and schemas first. Use `list_my_farms`, confirm the farm with the
+user, and pass `farm_id` explicitly. Where supported, `list_animals` accepts
+`inventory_status: "ALL"`, `skip` and `take`; `list_records` accepts `skip` and `take` and also
+accepts `type`, but the current HTTP endpoint ignores `type`, so `skip` and `take` are the only
+effective query controls. Filter a page by each record's own `type` locally, advance by the returned
+row count and the unfiltered `total`, and keep going past pages with no match. Follow
+returned `total` and actual rows until coverage is complete. `list_groups` has no pagination inputs;
+never assume all tools share one schema. `ALL` excludes soft-deleted animals. Read linked details
+and saved births as needed; do not match through a find-or-create tool.
+
+Classify every source item as proposed, already matched, duplicate, unresolved, or explicitly
+excluded, retaining file/sheet/page/row provenance. Show exact operations, targets and values;
+obtain approval, execute, then read back saved IDs and relationships. On partial failure or a lost
+response, stop and reconcile with reads before another write. Keep that coverage ledger with the
+source files; MCP does not persist it automatically. The
+[reconciliation recipe](skills/ranchbot/SKILL.md#mixed-source-reconciliation) covers ambiguous
+identities, event dates and unsupported birth cases. Ordinary access does not grant the separate
+admin concierge-import workflow.
+
+## Agent skill
+
+The package ships the same public Agent Skill bundle as the CLI at `skills/ranchbot` (`SKILL.md`
+plus `references/`). It teaches an agent task selection, approvals, multi-step workflows, and
+recovery; it is guidance, not a capability or a security boundary. It does not install the server,
+configure your client, authenticate you, or authorize farm operations.
+
+Install the existing bundle with the Agent Skills installer:
 
 ```bash
+npx skills add RanchBot/mcp-server --skill ranchbot
+```
+
+The CLI ships the same bundle and offers the equivalent route:
+`npx skills add RanchBot/cli --skill ranchbot`. Install **one** copy, inspect the source, and choose
+the agent/project scope your installer offers; you can also copy the entire `ranchbot` folder into a
+skill directory your host supports. The installer is third-party tooling and may emit its own
+telemetry and directory discovery; installing a skill promises no listing or ranking benefit.
+
+## Sign out and recover
+
+```bash
+ranchbot-mcp logout
+```
+
+Sessions refresh automatically when needed. Logout revokes the session before clearing the local
+cache; if revocation fails, the credentials are kept so you can retry. A tool call without a session
+returns terminal-login instructions; it does not start browser approval. Help and version need no
+login. Diagnose login, farm selection, access, lock, and upgrade problems with
+[Troubleshooting](https://github.com/RanchBot/mcp-server/blob/main/docs/troubleshooting.md).
+
+## Development and verification
+
+A source checkout can run credential-free dependency, build, and unit checks without a Ranch.Bot
+account:
+
+```bash
+npm ci
 npm run build
 npm run typecheck
 npm run lint
 npm run prettier
 npm test
+npm run test:release
+npm run check:versions
 ```
 
-Public setup returns only after current OAuth/scopes, npm and Registry read-back, and clean-machine
-installation, authentication, farm scope, representative reads/writes, revocation, and upgrades
-pass. The public CLI has independent setup guidance; local publication does not imply a hosted
-ChatGPT/Gemini connection. Current status:
-[ranch.bot/connect-your-ai](https://ranch.bot/connect-your-ai).
+CI runs these on Linux (including the full suite) and runs the native lock and session tests on
+macOS and Windows. See
+[Development](https://github.com/RanchBot/mcp-server/blob/main/docs/development.md) for focused test
+commands, authenticated development-server setup, environment variables, installation-local mode,
+and the self-hosted HTTP transport. A green local suite is not release or deployment evidence.
+
+## Documentation
+
+- [Workflows](https://github.com/RanchBot/mcp-server/blob/main/docs/workflows.md): the supported farm workflows.
+- [Architecture](https://github.com/RanchBot/mcp-server/blob/main/docs/architecture.md): the request path and who enforces what.
+- [Development](https://github.com/RanchBot/mcp-server/blob/main/docs/development.md): checks, the authenticated development server, and packaging.
+- [Troubleshooting](https://github.com/RanchBot/mcp-server/blob/main/docs/troubleshooting.md): login, farm selection, lock, and access problems.
+- [Contributing](https://github.com/RanchBot/mcp-server/blob/main/CONTRIBUTING.md)
+- [Security](https://github.com/RanchBot/mcp-server/blob/main/SECURITY.md)
+- [Maintaining](https://github.com/RanchBot/mcp-server/blob/main/MAINTAINING.md): maintainer
+  procedures: admin import sign-in, EID lookup and compatibility, token-cache locking and upgrades,
+  and installation-local sessions.
+
+## Support
+
+Email [support@ranch.bot](mailto:support@ranch.bot) with the package version from
+`ranchbot-mcp --version`. Do not include tokens, credentials, or customer records.
 
 ## License
 
-MIT
-
-### Token-cache locking and upgrades
-
-Token-cache reads and mutations use exclusive OS-managed locks (Node 22, pinned
-`fs-native-extensions@1.5.0`). Lock files at `~/.ranchbot-mcp-tokens.lock` persist after logout
-and process exit; their existence does not mean a client holds the lock. The OS releases
-ownership when a client exits or crashes, allowing waiting clients to recover automatically.
-Do not delete or replace a lock file while clients are running.
-
-Each tool call checks the shared cache so running clients adopt replacement sessions.
-Requests already using a revoked session may fail; failed requests are returned to the caller
-without automatic replay.
-
-Stop all older CLI/MCP processes before upgrading. Concurrent old/new lock protocols are
-unsupported. A legacy file identifying a live process is rejected with an upgrade error;
-an abandoned legacy file is reused in place. Acquisition errors fail closed, and contention
-times out after 30 seconds.
-
-Caches are bound to the API origin and OAuth client ID. A mismatch is rejected without overwriting
-credentials. Stop older clients before upgrading. For a cache without this metadata, run logout with
-its original `RANCHBOT_API_URL` and `COGNITO_DEVICE_CLIENT_ID`. Older provider credentials cannot be
-revoked by the device-session endpoint: revoke them with the original provider before removing the
-cache. A successful HTTP response alone does not establish legacy revocation.
-
-Installation-local accounts retain the CLI-managed installation session: use
-`ranchbot login --local --api-url <installation>` and set `RANCHBOT_DEPLOYMENT_MODE=local` plus the
-same `RANCHBOT_API_URL` in the MCP client. MCP login/logout directs you to the CLI in that mode.
-
-## Safe EID lookup and compatibility
-
-`lookup_animal_by_eid` is read-only, accepts `eid` and optional `farm_id`, and requires Reader
-access. It searches exact active EIDs on active animals across inventory statuses. A missing match
-returns HTTP 404; multiple matching animals return HTTP 409. Neither case creates inventory.
-`find_or_create_animal_by_eid` deliberately creates inventory on a miss and requires Editor access.
-
-`find_animal_by_identifier` is deprecated and still **creates inventory** for compatibility.
-Migrate reads to `lookup_animal_by_eid` and approved creation to `find_or_create_animal_by_eid`.
-The deprecated alias remains through the current minor version; remove it only in a breaking release
-with release notes. Both creation tools carry `readOnlyHint: false`.
-
-Deploy the API's `/animals/lookup-by-eid` endpoint before releasing the new tool. An older API
-causes lookup to fail; clients never fall back to find-or-create. This source change does not
-establish npm, MCP Registry, or indexed-listing availability.
+MIT. See [LICENSE](LICENSE).

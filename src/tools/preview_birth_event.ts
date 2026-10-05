@@ -1,1 +1,1 @@
-export { previewBirthEvent as handleTool } from './birthEventShared';
+export { previewBirthEvent as handleTool } from './_shared/birthEventShared';

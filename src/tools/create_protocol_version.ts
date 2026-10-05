@@ -1,1 +1,1 @@
-export { createProtocolVersion as handleTool } from './birthEventShared';
+export { createProtocolVersion as handleTool } from './_shared/birthEventShared';

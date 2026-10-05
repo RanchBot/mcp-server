@@ -5,13 +5,13 @@
  * `release.mjs` so they can be unit tested without side effects.
  *
  * Subcommands: validate-tag | check-tarball | registry-status | verify-registry
- * | render-notes | github-release
+ * | registry-publish | render-notes | github-release
  *
  * The module is import-safe: `runGitHubRelease` is exported with injectable
  * `io`/`fs` so tests can exercise the recovery ordering without `gh`, npm, or
  * credentials. The CLI dispatch only runs when this file is the entrypoint.
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   appendFileSync,
   mkdirSync,
@@ -27,11 +27,14 @@ import { pathToFileURL } from 'node:url';
 import {
   MANIFEST_ASSET_NAME,
   assertReleaseIdentity,
+  assertStableVersion,
   assertTarballAllowlist,
   assertVersionAlignment,
   buildReleaseManifest,
+  classifyMcpRegistryView,
   compareManifests,
   gitHubReleasePlan,
+  mcpRegistryDecision,
   parseManifest,
   parsePackResult,
   parseStableTag,
@@ -40,6 +43,7 @@ import {
   releaseEnabled,
   renderReleaseNotes,
   sha512Integrity,
+  verifyMcpRegistryEntry,
   verifyRegistry,
   versionChecks,
 } from './release.mjs';
@@ -180,6 +184,101 @@ async function verifyRegistryEntry() {
   });
   setOutput({ verified: 'true', exists: 'true' });
   console.log(`registry: verified ${version} after ${result.attempts} check(s)`);
+}
+
+const MCP_REGISTRY_TIMEOUT_MS = 30000;
+const MCP_PUBLISHER_TIMEOUT_MS = 120000;
+
+/**
+ * Run a command without echoing its argv. `mcp-publisher` receives the DNS
+ * seed as an argument, and `execFileSync` echoes argv in its failure message,
+ * so this path uses `spawnSync` and rethrows a sanitized error instead.
+ */
+function runPrivate(command, args) {
+  const result = spawnSync(command, args, {
+    stdio: 'inherit',
+    timeout: MCP_PUBLISHER_TIMEOUT_MS,
+  });
+  if (result.error) throw new Error(`${command} could not start: ${result.error.message}`);
+  if (result.status !== 0) throw new Error(`${command} exited with status ${result.status}`);
+}
+
+async function readMcpRegistryView({ name, version }) {
+  const url = new URL(`${config.mcpRegistry.registryUrl}/v0.1/servers`);
+  url.searchParams.set('search', name);
+  let response;
+  try {
+    response = await fetch(url, {
+      signal: AbortSignal.timeout(MCP_REGISTRY_TIMEOUT_MS),
+      headers: { accept: 'application/json' },
+    });
+  } catch (error) {
+    throw new Error(`MCP Registry read failed: ${error.message}`);
+  }
+  if (!response.ok) throw new Error(`MCP Registry read failed: HTTP ${response.status}`);
+  let json;
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error('MCP Registry returned malformed JSON');
+  }
+  return classifyMcpRegistryView({ name, version, json });
+}
+
+/**
+ * Publish the tagged candidate to the MCP Registry when Registry publication
+ * is enabled, then read the entry back strictly. The job is a no-op with a
+ * notice when `MCP_REGISTRY_RELEASE_ENABLED` is not `true`.
+ */
+async function mcpRegistryPublish() {
+  const registry = config.mcpRegistry;
+  if (!releaseEnabled(process.env[registry.enabledVariable])) {
+    console.log(
+      `::notice::${registry.enabledVariable} is not 'true'; MCP Registry publication is disabled for this tag.`,
+    );
+    setOutput({ published: 'false', registry_verified: 'false' });
+    return;
+  }
+  const serverJson = readJson('server.json');
+  const version = process.env.RELEASE_VERSION || serverJson.version;
+  assertStableVersion(version);
+  const seed = process.env[registry.privateKeySecret];
+  if (!seed) {
+    throw new Error(`${registry.privateKeySecret} is required to publish to the MCP Registry`);
+  }
+  runPrivate('mcp-publisher', ['validate']);
+  const read = () => readMcpRegistryView({ name: registry.serverName, version });
+  const decision = mcpRegistryDecision({
+    version,
+    view: await read(),
+    serverName: registry.serverName,
+    packageName: config.packageName,
+    transport: registry.transport,
+  });
+  if (decision.publish) {
+    runPrivate('mcp-publisher', [
+      'login',
+      'dns',
+      '--domain',
+      registry.domain,
+      '--private-key',
+      seed,
+    ]);
+    runPrivate('mcp-publisher', ['publish']);
+  } else {
+    console.log(`mcp registry: ${decision.reason}`);
+  }
+  const result = await verifyMcpRegistryEntry({
+    version,
+    serverName: registry.serverName,
+    packageName: config.packageName,
+    transport: registry.transport,
+    read,
+  });
+  setOutput({ published: String(decision.publish), registry_verified: 'true' });
+  console.log(
+    `mcp registry: verified ${registry.serverName}@${version} after ${result.attempts} check(s)`,
+  );
 }
 
 function renderNotes() {
@@ -519,6 +618,7 @@ const commands = {
   'check-tarball': checkTarball,
   'registry-status': registryStatus,
   'verify-registry': verifyRegistryEntry,
+  'registry-publish': mcpRegistryPublish,
   'render-notes': renderNotes,
   'github-release': githubRelease,
 };

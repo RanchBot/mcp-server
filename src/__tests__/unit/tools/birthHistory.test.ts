@@ -1,14 +1,17 @@
 import { RanchBotApiClient } from '../../../client';
 import { getToolHandlerPath } from '../../../toolRegistry';
 import { registerTools } from '../../../tools';
-import * as handlers from '../../../tools/birthHistoryShared';
-import { birthHistoryTools } from '../../../tools/birthHistoryTools';
+import * as handlers from '../../../tools/_shared/birthHistoryShared';
+import { birthHistoryTools } from '../../../tools/_shared/birthHistoryTools';
 
 const farmId = '11111111-1111-4111-8111-111111111111';
 const damId = '22222222-2222-4222-8222-222222222222';
 it('registers callable history tools with an explicit settings schema and correct write annotation', async () => {
   for (const tool of birthHistoryTools) {
-    expect(registerTools()).toContainEqual(tool);
+    expect(registerTools()).toContainEqual({
+      ...tool,
+      description: expect.stringContaining(tool.description!),
+    });
     expect(getToolHandlerPath(tool.name)).toBe(`./tools/${tool.name}.js`);
     expect(typeof (await import(`../../../tools/${tool.name}`)).handleTool).toBe('function');
     expect(tool.annotations?.readOnlyHint).toBe(tool.name !== 'set_birth_history_settings');

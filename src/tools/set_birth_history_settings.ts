@@ -1,1 +1,1 @@
-export { setBirthHistorySettings as handleTool } from './birthHistoryShared';
+export { setBirthHistorySettings as handleTool } from './_shared/birthHistoryShared';
