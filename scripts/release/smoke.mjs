@@ -69,18 +69,24 @@ async function stdioSmoke() {
     if (!Array.isArray(tools?.tools) || tools.tools.length === 0) {
       throw new Error('tools/list returned no tools');
     }
-    for (const tool of tools.tools) {
-      if (tool.annotations?.readOnlyHint === true || tool.name === 'set_default_farm') continue;
-      for (const warning of ['app confirmation screen', 'Change History', 'reconcile with reads']) {
-        if (!tool.description.includes(warning)) throw new Error(`${tool.name} omits ${warning}`);
+    const instructions = init?.instructions ?? '';
+    for (const warning of ['Change History', 'reconcile with reads', 'approval']) {
+      if (!instructions.includes(warning)) {
+        throw new Error(`initialize instructions omit ${warning}`);
       }
     }
-    const birth = tools.tools.find((tool) => tool.name === 'confirm_birth_event');
-    if (
-      !birth?.description.includes('A saved birth cannot be corrected') ||
-      !birth.description.includes('confirmation_hash')
-    ) {
-      throw new Error('Birth description must preserve confirmation and correction restrictions');
+    const preview = tools.tools.find((tool) => tool.name === 'preview_birth_event');
+    const confirm = tools.tools.find((tool) => tool.name === 'confirm_birth_event');
+    for (const birth of [preview, confirm]) {
+      if (
+        !birth?.description.includes('A saved birth cannot be corrected') ||
+        !birth.description.includes('https://ranch.bot/support')
+      ) {
+        throw new Error('Birth descriptions must preserve the correction boundary');
+      }
+    }
+    if (!confirm?.description.includes('confirmation_hash')) {
+      throw new Error('Birth description must preserve confirmation restrictions');
     }
     console.log(`smoke ok: ${binary} --version=${version}, tools=${tools.tools.length}`);
   } finally {

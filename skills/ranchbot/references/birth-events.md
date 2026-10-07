@@ -5,36 +5,43 @@ creates offspring, dam relationships, care records, tasks, and evidence links in
 Availability is capability-dependent: if the connected release does not expose the birth commands
 or tools, stop and explain — do not fall back to generic animal or record writes.
 
-## Approval workflow
+## Preview
 
-1. **Preview.** Send a caller-generated `request_id` UUID and the complete `bundle`. Preview reads
-   current identity, group, protocol, and source evidence and saves **no** farm data. It returns the
-   complete resolved bundle, review, evidence, and a `confirmation_hash`.
-2. **Review the whole result with the producer.** Show every field the producer must own —
-   offspring labels and sex, weights, dated care and supplementation, protocol version or unresolved
-   claim, group membership, evidence assignments, sire claim, and follow-up dates. Review labels are
-   temporary; they are never animal identifiers.
-3. **Get explicit approval of that exact preview.** Do not treat silence, an earlier approval, or a
-   similar-looking birth as approval.
-4. **Confirm.** Send the same `request_id`, the **exact** reviewed `bundle`, and the
-   `confirmation_hash` from that preview. Confirmation requires editor access and the
-   `write:records`, `write:animals`, and `write:groups` scopes.
+Send a caller-generated `request_id` UUID and the complete `bundle`. Preview reads current identity,
+group, protocol, and source evidence and saves **no** farm data. It returns the complete resolved
+bundle, review, evidence, and a `confirmation_hash`.
 
-## Preserve the returned tuple
+## Approval
+
+Review the whole result with the producer. Show every field the producer must own — offspring
+labels and sex, weights, dated care and supplementation, protocol version or unresolved claim,
+group membership, evidence assignments, sire claim, and follow-up dates. Review labels are
+temporary; they are never animal identifiers. Get explicit approval of that exact preview. Do not
+treat silence, an earlier approval, or a similar-looking birth as approval.
+
+**Before confirmation only:** any correction, changed field, or changed referenced review data in
+an unconfirmed proposal requires a fresh preview and renewed approval. A stale preview must be
+reviewed again. This does not apply to a saved event.
+
+## Confirmation
+
+Send the same `request_id`, the **exact** reviewed `bundle`, and the `confirmation_hash` from that
+preview. Confirmation requires editor access and the `write:records`, `write:animals`, and
+`write:groups` scopes.
 
 - The `request_id` is caller-generated and stable across preview, confirmation, and retries.
 - The `confirmation_hash` must be the value **returned by the preview**. Never invent, guess,
   truncate, or reuse a hash from a different preview.
-- **Before confirmation only:** any correction, changed field, or changed referenced review data
-  in an unconfirmed proposal requires a fresh preview and a renewed approval. A stale preview must
-  be reviewed again. This does not apply to a saved event.
-- **Retries:** an explicitly requested retry may reuse the exact approved `request_id`, `bundle`,
-  and `confirmation_hash`. Under the idempotency contract, repeating the same request and hash
-  returns its already-saved event; it is a retrieval, not a correction. A different payload cannot
-  reuse that request ID. Never fabricate a hash and never fall back to generic CRUD to force a save.
-  If a confirmation outcome is uncertain, reconcile with reads before any further write.
+- Never fabricate a hash and never fall back to generic CRUD to force a save.
 
-## Corrections and unsupported edits
+## Retry and recovery
+
+An explicitly requested retry may reuse the exact approved `request_id`, `bundle`, and
+`confirmation_hash`. Under the idempotency contract, repeating the same request and hash returns
+its already-saved event; it is a retrieval, not a correction. A different payload cannot reuse that
+request ID. If a confirmation outcome is uncertain, reconcile with reads before any further write.
+
+## Unsupported corrections
 
 Saved birth correction is **not currently supported** by any public CLI or MCP operation. If a
 producer asks to correct a saved birth, stop and refer them to https://ranch.bot/support; do not

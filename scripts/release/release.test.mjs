@@ -40,23 +40,35 @@ const sha = 'a'.repeat(40);
 const integrity =
   'sha512-m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw==';
 
-test('packaged README refuses saved-birth correction and limits fresh previews to unconfirmed proposals', () => {
+test('packaged README keeps the saved-birth boundary and routes recovery detail to the reference', () => {
   const readme = readFileSync(join(root, 'README.md'), 'utf8').replace(/\s+/g, ' ');
 
-  assert.match(readme, /Before confirmation only, changes to an unconfirmed proposal/);
-  assert.match(readme, /Saved birth correction is not currently supported/);
-  assert.match(readme, /stop and refer the producer to https:\/\/ranch\.bot\/support/);
-  assert.match(readme, /Do not promise an amendment/);
-  assert.match(readme, /Never re-record a saved birth/);
-  assert.match(readme, /new preview\/confirmation, a new `request_id`/);
+  // The README carries the essential boundary only, plus a link to the canonical recovery detail.
+  assert.match(readme, /A saved birth cannot be corrected through these tools/);
   assert.match(
     readme,
-    /stripped or forged source provenance, or generic animal, record, or task edits/,
+    /stop and refer the producer to \[support\]\(https:\/\/ranch\.bot\/support\)/,
   );
-  assert.match(readme, /even with producer approval/);
-  assert.match(readme, /unchanged retry of the exact approved tuple.*not a correction/);
-  assert.match(readme, /outcome is uncertain, reconcile with reads before any further write/);
+  assert.match(readme, /without promising an amendment/);
+  assert.match(
+    readme,
+    /birth events reference\]\(skills\/ranchbot\/references\/birth-events\.md\)/,
+  );
   assert.doesNotMatch(readme, /Corrections (?:or changed evidence )?require a fresh preview/);
+
+  // The full retry/recovery rationale has one home: the bundled birth reference.
+  const reference = readFileSync(
+    join(root, 'skills/ranchbot/references/birth-events.md'),
+    'utf8',
+  ).replace(/\s+/g, ' ');
+  assert.match(reference, /Saved birth correction is \*\*not currently supported\*\*/);
+  assert.match(reference, /Before confirmation only/);
+  assert.match(reference, /unconfirmed proposal/);
+  assert.match(reference, /new `request_id`/);
+  assert.match(reference, /provenance/);
+  assert.match(reference, /duplicate/);
+  assert.match(reference, /components/);
+  assert.match(reference, /unchanged retry of the exact approved tuple.*not a correction/);
 });
 
 test('only the literal true enables publication', () => {

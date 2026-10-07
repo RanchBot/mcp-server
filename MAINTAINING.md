@@ -73,6 +73,19 @@ permissions and refresh when the configured environment supports it.
 The optional self-hosted HTTP transport uses bearer API-key auth for development compatibility. API
 keys are deprecated and are not part of customer onboarding.
 
+### Login and session troubleshooting
+
+- **Expired or missing session:** a tool call that returns terminal-login instructions means no
+  valid session exists. Run `ranchbot-mcp login` (or `node dist/index.js login` in a source
+  checkout), approve the displayed code in the browser, then retry. Tool calls never start browser
+  approval.
+- **Access denied:** check the account's farm membership and the scopes listed above. A denied
+  read is usually an authorization problem, not a login problem; re-authenticating does not grant
+  access.
+- **Logout:** `ranchbot-mcp logout` revokes the session before clearing the cache. If revocation
+  fails, credentials remain so the operation can be retried; do not delete the cache manually.
+- **Help and version:** `--help` and `--version` need no login.
+
 ### Admin import sign-in
 
 For internal concierge imports, add `--admin` to the stdio command (or to the local client's
@@ -108,8 +121,9 @@ npm test
 
 Promote a new version only after current OAuth/scopes, npm and Registry read-back, and clean-machine
 installation, authentication, farm scope, representative reads/writes, revocation, and upgrades
-pass. The public CLI has independent setup guidance; local publication does not imply a hosted
-ChatGPT/Gemini connection. Current status:
+pass. That is package- and protocol-level acceptance, not certification of any named MCP client;
+name a client only with recorded per-client evidence. The public CLI has independent setup
+guidance; local publication does not imply a hosted ChatGPT/Gemini connection. Current status:
 [ranch.bot/connect-your-ai](https://ranch.bot/connect-your-ai).
 
 ## Safe EID lookup and compatibility

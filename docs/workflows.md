@@ -1,9 +1,9 @@
 # Workflows
 
-Three farm workflows an MCP client can run against one Ranch.Bot farm at a time: find an animal and
-read its records, review and save an ordinary record, and preview and confirm a birth. Every tool
-call is farm-scoped and uses the caller's granted access. For first-time setup, see the
-[README](../README.md).
+Four farm workflows an MCP client can run against one Ranch.Bot farm at a time: find an animal and
+read its records, review and save an ordinary record, preview and confirm a birth, and run a
+farm-configured `record_birth` template. Every tool call is farm-scoped and uses the caller's
+granted access. For first-time setup, see the [README](../README.md).
 
 Before any write, present the operation, farm, resolved targets, exact values, and consequences to
 the producer, and obtain explicit approval. One approval may cover an explicitly listed batch; a
@@ -122,6 +122,29 @@ Rules that keep a birth safe:
 Related birth tools: `list_farm_tasks` includes undated TODOs, and `update_farm_task` changes a
 task's status and optional due date. `list_protocol_versions` and `create_protocol_version` use
 producer-provided immutable steps; never invent care instructions.
+
+## Run a configured birth workflow
+
+A farm can configure a versioned `record_birth` template (labels, visibility, requiredness, literal
+and `today` defaults, units, and custom observations). A template never changes the meaning or the
+indispensable review controls of a core birth field.
+
+1. **Preview** with `preview_workflow` (`request_id`, `template_id`, `inputs.event`,
+   `inputs.offspring`, and `timezone` whenever a `today` default is resolved). It returns a
+   non-committable preview and saves no farm data. A preview that needs a timezone comes back with a
+   `missing_timezone` issue instead of committing.
+2. **Review and approve** every resolved field and custom answer with the producer.
+3. **Commit** with `commit_workflow` and the exact `preview_hash`. Pass
+   `{approval:{confirmed:true, preview_hash}}`; a stale hash returns a conflict and writes nothing.
+   Commit reuses the same atomic birth writer as `confirm_birth_event`.
+4. **Read back** with `get_workflow_preview` or the saved birth reads. Discard an uncommitted preview
+   with `discard_workflow`.
+
+Template configuration uses `list_workflow_templates`, `get_workflow_template`,
+`create_workflow_template`, `publish_workflow_template_version`, `update_workflow_template_state`,
+and `set_default_workflow_template`. Only Owners create, publish versions, archive/reactivate, or
+select the default; reads use `read:farms` and configuration writes use `write:farms`. Archiving the
+default requires an active replacement in the same transaction.
 
 ## Pagination
 

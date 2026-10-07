@@ -135,6 +135,17 @@ test('every public document link and fragment resolves in the package', () => {
   assertPublicDocumentLinks({ root, documents: config.publicDocuments });
 });
 
+test('README navigates to every required package guide', () => {
+  const readme = readFileSync(join(root, 'README.md'), 'utf8');
+  const targets = extractMarkdownLinks(readme).map((link) => classifyLinkTarget(link.target));
+  for (const document of config.requiredDocuments) {
+    assert.ok(
+      targets.some((target) => target.kind === 'internal' && target.path === document),
+      `README must link to ${document}`,
+    );
+  }
+});
+
 test('valid nested links, anchors, external and mail links pass', () => {
   assert.doesNotThrow(() =>
     check(['README.md'], {

@@ -6,14 +6,14 @@ access to a farm.
 
 ## Connect
 
-The verified public pin is MCP server `0.1.2`. Install and sign in once in a terminal:
+The verified public pin is MCP server `0.1.4`. Install and sign in once in a terminal:
 
-This is the accepted-pin snapshot checked on 2026-10-02. The package containing this skill may be
+This is the accepted-pin snapshot checked on 2026-10-06. The package containing this skill may be
 an unreleased candidate newer than this pin. Check [current MCP setup](https://ranch.bot/docs/mcp-setup)
 before installing or upgrading; do not automatically downgrade an existing installation.
 
 ```bash
-npm install -g @ranchbot/mcp-server@0.1.2
+npm install -g @ranchbot/mcp-server@0.1.4
 ranchbot-mcp login
 ranchbot-mcp --help
 ```
@@ -25,6 +25,23 @@ start login. `ranchbot-mcp logout` revokes the session before clearing credentia
 
 Any MCP client that can run a local stdio server can use these tools. This is not a certification
 of any named client, and it does not create a hosted connection.
+
+## Optional Agent Skill
+
+The same public Agent Skill bundle ships with the CLI and MCP server at `skills/ranchbot`
+(`SKILL.md` plus `references/`, including this file). It is optional guidance, not a capability or
+a security boundary. Install one copy with the third-party Agent Skills installer:
+
+```bash
+npx skills add RanchBot/mcp-server --skill ranchbot
+npx skills add RanchBot/cli --skill ranchbot
+```
+
+Inspect the source, choose the agent/project scope your installer offers, and install **one** copy;
+you can also copy the whole `ranchbot` folder into a skill directory your host supports. The
+installer may emit its own telemetry and directory discovery, and a listing or ranking gain is not
+promised. Installing a skill does not install `ranchbot-mcp`, configure the client, authenticate
+you, or authorize farm operations.
 
 ## Discover tools
 

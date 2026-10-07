@@ -105,6 +105,58 @@ export const birthBundleInputSchema = {
               "unknown"
             ]
           },
+          "identifiers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "BRAND",
+                    "EID",
+                    "MANAGEMENT_TAG",
+                    "NAME",
+                    "TATTOO"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "is_primary": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 20
+          },
+          "custom": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
           "birth_weight": {
             "type": "object",
             "properties": {
@@ -379,6 +431,26 @@ export const birthBundleInputSchema = {
       },
       "maxItems": 30,
       "default": []
+    },
+    "custom": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 1000
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
     }
   },
   "required": [

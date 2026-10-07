@@ -31,14 +31,14 @@ const define = (
 export const birthEventTools: Tool[] = [
   define(
     'preview_birth_event',
-    'Validate and preview one atomic birth event without saving farm data. Show the producer every bundle field and all resolved dam, group, protocol, and evidence details. Obtain explicit approval of this exact preview before calling confirm_birth_event. Before confirmation only, any change to the proposal requires another preview and renewed approval. A saved birth cannot be corrected through this or any other tool: stop and refer the producer to https://ranch.bot/support without promising an amendment. Never re-record a saved birth to correct it — do not send a corrected bundle through a new preview, substitute a new request_id, strip or forge source provenance, or fall back to generic animal, record, or task edits, even with producer approval.',
+    'Validate and preview one atomic birth event without saving farm data. Show the producer every bundle field and all resolved dam, group, protocol, and evidence details. Obtain explicit approval of this exact preview before calling confirm_birth_event. Before confirmation only, any change to the proposal or its referenced evidence requires another preview and renewed approval. A saved birth cannot be corrected here: do not re-record one or use generic edits as a workaround; stop and refer the producer to https://ranch.bot/support without promising an amendment.',
     request,
     ['request_id', 'bundle'],
     true,
   ),
   define(
     'confirm_birth_event',
-    'Save one complete producer-approved birth bundle. Only call after the producer explicitly approves the exact preview. Preserve its request_id, bundle, and confirmation_hash exactly; never generate the hash or silently obtain and approve a fresh preview. A stale or changed preview must be reviewed again. A saved birth cannot be corrected through this or any other tool: stop and refer the producer to https://ranch.bot/support without promising an amendment — never re-record it through a new preview/confirmation, substitute a new request_id, strip or forge source provenance, or fall back to generic animal, record, or task edits, even with producer approval. An unchanged retry of the exact approved tuple returns the already-saved event; it is a retrieval, not a correction. If a confirmation outcome is uncertain, reconcile with reads before any further write.',
+    'Save one complete producer-approved birth bundle. Only call after the producer explicitly approves the exact preview. Preserve its request_id, bundle, and confirmation_hash exactly; never generate the hash or silently obtain and approve a fresh preview. An unchanged retry of the exact approved tuple returns the already-saved event; it is a retrieval, not a correction. If a confirmation outcome is uncertain, reconcile with reads before any further write. A saved birth cannot be corrected here: do not re-record one or use generic edits as a workaround; stop and refer the producer to https://ranch.bot/support without promising an amendment.',
     { ...request, confirmation_hash: { type: 'string', pattern: '^[a-f0-9]{64}$' } },
     ['request_id', 'bundle', 'confirmation_hash'],
     false,

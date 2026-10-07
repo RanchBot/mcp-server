@@ -1,6 +1,6 @@
 {
   "name": "@ranchbot/mcp-server",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Local MCP server for Ranch.Bot livestock recordkeeping.",
   "mcpName": "bot.ranch/mcp-server",
   "main": "dist/index.js",

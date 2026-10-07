@@ -9,6 +9,7 @@ import { PACKAGE_VERSION } from '../../version';
 // Locked tool surface: a rename or removal is a breaking change for every MCP client.
 const EXPECTED_TOOL_NAMES = [
   'add_identifier',
+  'commit_workflow',
   'confirm_birth_event',
   'create_animal',
   'create_chute_session',
@@ -16,9 +17,11 @@ const EXPECTED_TOOL_NAMES = [
   'create_protocol_version',
   'create_ration',
   'create_record',
+  'create_workflow_template',
   'delete_animal',
   'delete_group',
   'delete_record',
+  'discard_workflow',
   'farm_archive',
   'find_animal_by_identifier',
   'find_or_create_animal_by_eid',
@@ -35,6 +38,8 @@ const EXPECTED_TOOL_NAMES = [
   'get_import_request',
   'get_ration',
   'get_record',
+  'get_workflow_preview',
+  'get_workflow_template',
   'list_animals',
   'list_birth_events',
   'list_chute_sessions',
@@ -48,18 +53,23 @@ const EXPECTED_TOOL_NAMES = [
   'list_protocol_versions',
   'list_rations',
   'list_records',
+  'list_workflow_templates',
   'lookup_animal_by_eid',
   'preview_birth_event',
+  'preview_workflow',
+  'publish_workflow_template_version',
   'remove_identifier',
   'restore_group',
   'set_birth_history_settings',
   'set_default_farm',
+  'set_default_workflow_template',
   'update_animal',
   'update_chute_session',
   'update_farm_task',
   'update_group',
   'update_import_request_status',
   'update_record',
+  'update_workflow_template_state',
 ];
 
 /**
@@ -174,15 +184,14 @@ describe('createRanchBotServer', () => {
     const confirm = byName.get('confirm_birth_event')!;
 
     // Each surface must stand alone: an MCP-only client sees the initialization instructions
-    // and tool descriptions, but never the optional Agent Skill.
+    // and tool descriptions, but never the optional Agent Skill. These surfaces keep the
+    // essential boundary; the full recovery rationale lives in the skill's birth-events reference.
     for (const surface of [instructions, preview.description ?? '', confirm.description ?? '']) {
       expect(surface).toMatch(/saved birth cannot be corrected/i);
       expect(surface).toContain('https://ranch.bot/support');
       expect(surface).toMatch(/without promising an amendment/i);
-      expect(surface).toMatch(/re-record/i);
-      expect(surface).toMatch(/new request_id/i);
-      expect(surface).toMatch(/provenance/i);
-      expect(surface).toMatch(/generic animal, record, or task edits/i);
+      expect(surface).toMatch(/do not re-record one/i);
+      expect(surface).toMatch(/generic edits as a workaround/i);
     }
 
     // Preview: changes are limited to unconfirmed proposals and keep exact approval.
@@ -196,6 +205,24 @@ describe('createRanchBotServer', () => {
     expect(confirm.description).toMatch(/retrieval, not a correction/i);
     expect(confirm.description).toMatch(/reconcile with reads before any further write/i);
 
+    await client.close();
+  });
+
+  it('keeps general write guidance in initialization rather than every mutation tool', async () => {
+    // Metadata assertion (not a behavioral test): the blanket write warning is not duplicated
+    // on each tool description; initialization instructions own it.
+    const deps = depsWith();
+    const { client } = await connect(deps)();
+    const instructions = client.getInstructions() ?? '';
+    expect(instructions).toMatch(/Change History/);
+    expect(instructions).toMatch(/reconcile with reads/);
+
+    const byName = new Map((await client.listTools()).tools.map((t) => [t.name, t] as const));
+    for (const name of ['create_animal', 'update_record', 'delete_group', 'add_identifier']) {
+      expect(byName.get(name)?.description ?? '').not.toMatch(
+        /Change History|app confirmation screen/,
+      );
+    }
     await client.close();
   });
 

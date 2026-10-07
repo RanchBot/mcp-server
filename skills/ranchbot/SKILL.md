@@ -73,15 +73,11 @@ Use the reference that matches the task and the connected interface; read only t
 - Farm memory and feedings are read-only here. Saving memory happens in the Ranch.Bot app, not
   through these interfaces.
 - Chute sessions are proposals; do not treat a proposal as an applied record.
-- Birth events use one explicit preview/confirmation workflow. Before confirmation, any change to
-  the proposal requires a fresh preview and renewed approval. Saved birth correction is **not
-  currently supported** by any public CLI or MCP operation: stop and refer the producer to
-  https://ranch.bot/support; do not promise that support will perform an amendment.
-- Never work around a saved-birth correction by re-recording the event through a new
-  preview/confirmation, substituting a new `request_id`, stripping or forging SMS/source
-  provenance, or using generic animal, record, or task edits. That can duplicate offspring, birth
-  and care records, and tasks while leaving the incorrect saved event in place. An unchanged retry
-  of the exact approved tuple is only an idempotent retrieval, not a correction.
+- Birth events use one explicit preview/confirmation workflow; preserve the approved tuple and
+  re-preview any unconfirmed change. Saved birth correction is **not currently supported** by any
+  public CLI or MCP operation: stop and refer the producer to https://ranch.bot/support without
+  promising an amendment, and never re-record the event or fall back to generic edits. See the
+  [birth events reference](references/birth-events.md) for retry and recovery detail.
 - Admin imports, admin account deletion, and observer SMS investigation are outside this public
   skill. If a task needs them, stop and explain that they require a separate server-authorized
   login.

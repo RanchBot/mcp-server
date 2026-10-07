@@ -100,6 +100,77 @@ export class RanchBotApiClient {
     return (await this.client.post(`/farm/${farmId}/protocol-versions`, data)).data;
   }
 
+  async listWorkflowTemplates(
+    farmId: string,
+    params?: { skip?: number; take?: number; workflow?: string },
+  ) {
+    return (await this.client.get(`/farm/${farmId}/workflow-templates`, { params })).data;
+  }
+
+  async getWorkflowTemplate(farmId: string, templateId: string) {
+    return (await this.client.get(`/farm/${farmId}/workflow-templates/${templateId}`)).data;
+  }
+
+  async createWorkflowTemplate(
+    farmId: string,
+    data: { definition: Record<string, unknown>; is_default?: boolean },
+  ) {
+    return (await this.client.post(`/farm/${farmId}/workflow-templates`, data)).data;
+  }
+
+  async publishWorkflowTemplateVersion(
+    farmId: string,
+    templateId: string,
+    data: { expected_current_version: number; definition: Record<string, unknown> },
+  ) {
+    return (
+      await this.client.post(`/farm/${farmId}/workflow-templates/${templateId}/versions`, data)
+    ).data;
+  }
+
+  async updateWorkflowTemplateState(
+    farmId: string,
+    templateId: string,
+    data: {
+      expected_metadata_revision: number;
+      is_active: boolean;
+      replacement_template_id?: string;
+    },
+  ) {
+    return (await this.client.put(`/farm/${farmId}/workflow-templates/${templateId}/state`, data))
+      .data;
+  }
+
+  async setDefaultWorkflowTemplate(
+    farmId: string,
+    templateId: string,
+    data: { expected_metadata_revision: number },
+  ) {
+    return (await this.client.put(`/farm/${farmId}/workflow-templates/${templateId}/default`, data))
+      .data;
+  }
+
+  async previewWorkflow(farmId: string, data: Record<string, unknown>) {
+    return (await this.client.post(`/farm/${farmId}/workflows/preview`, data)).data;
+  }
+
+  async getWorkflowPreview(farmId: string, previewId: string) {
+    return (await this.client.get(`/farm/${farmId}/workflows/previews/${previewId}`)).data;
+  }
+
+  async commitWorkflow(
+    farmId: string,
+    previewId: string,
+    data: { approval: { confirmed: true; preview_hash: string } },
+  ) {
+    return (await this.client.post(`/farm/${farmId}/workflows/previews/${previewId}/commit`, data))
+      .data;
+  }
+
+  async discardWorkflow(farmId: string, previewId: string) {
+    return (await this.client.post(`/farm/${farmId}/workflows/previews/${previewId}/discard`)).data;
+  }
+
   async requestFarmExport(farmId: string) {
     return (await this.client.post(`/farm/${farmId}/exports`)).data;
   }

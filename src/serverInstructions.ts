@@ -22,6 +22,6 @@ Uncertain writes: if a write times out or its result is unclear, stop and reconc
 
 Birth events: a birth is saved only through preview_birth_event followed by confirm_birth_event, using the producer-approved exact preview tuple. Before confirmation only, any change to the proposal requires a fresh preview and renewed approval. An unchanged retry of the exact approved tuple returns the already-saved event; it is not a correction. If a confirmation outcome is uncertain, reconcile with reads before any further write.
 
-Saved-birth correction: a saved birth cannot be corrected through these tools. Stop and refer the producer to https://ranch.bot/support without promising an amendment. Never re-record a saved birth to correct it — do not send a corrected bundle through a new preview/confirmation, substitute a new request_id, strip or forge source provenance, or fall back to generic animal, record, or task edits, even with producer approval.
+Saved-birth correction: a saved birth cannot be corrected through these tools. Do not re-record one or use generic edits as a workaround; stop and refer the producer to https://ranch.bot/support without promising an amendment.
 
 Capability discovery: rely on the connected server's tool list and input schemas. If a needed operation is not exposed, stop and explain rather than inventing a tool or substituting an unrelated write.`;

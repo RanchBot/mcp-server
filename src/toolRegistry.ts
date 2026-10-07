@@ -17,6 +17,17 @@ export const toolRegistry: Record<string, string> = {
   update_farm_task: './tools/update_farm_task.js',
   list_protocol_versions: './tools/list_protocol_versions.js',
   create_protocol_version: './tools/create_protocol_version.js',
+  // Workflow template and preview/commit tools
+  list_workflow_templates: './tools/list_workflow_templates.js',
+  get_workflow_template: './tools/get_workflow_template.js',
+  create_workflow_template: './tools/create_workflow_template.js',
+  publish_workflow_template_version: './tools/publish_workflow_template_version.js',
+  update_workflow_template_state: './tools/update_workflow_template_state.js',
+  set_default_workflow_template: './tools/set_default_workflow_template.js',
+  preview_workflow: './tools/preview_workflow.js',
+  get_workflow_preview: './tools/get_workflow_preview.js',
+  commit_workflow: './tools/commit_workflow.js',
+  discard_workflow: './tools/discard_workflow.js',
   // Farm tools
   list_my_farms: './tools/list_my_farms.js',
   get_farm: './tools/get_farm.js',
