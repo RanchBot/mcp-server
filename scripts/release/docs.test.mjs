@@ -304,6 +304,22 @@ test('package config checks, ships, and exports every required document', () => 
   });
 });
 
+test('configured birth example, shared payloads and guidance are shipped and exported', () => {
+  for (const path of [
+    'docs/examples/configured-birth.cjs',
+    'docs/examples/birthPayloads.cjs',
+    'skills/ranchbot/references/workflows.md',
+  ]) {
+    assert.ok(existsSync(join(root, path)), path);
+    assert.ok(config.tarball.requiredRootFiles.includes(path), `${path} must ship`);
+    assert.ok(
+      exportCoversDocument({ allowlist: config.sourceExport, document: path }),
+      `${path} must export`,
+    );
+  }
+  assert.ok(config.publicDocuments.includes('skills/ranchbot/references/workflows.md'));
+});
+
 test('PUBLISHING.md and config.sourceExport agree when the private file is present', () => {
   const publishingPath = join(root, 'PUBLISHING.md');
   if (!existsSync(publishingPath)) return;

@@ -1,12 +1,8 @@
 import { z } from 'zod';
 import { RanchBotApiClient } from '../../client';
+import { paginatedToolSchemas } from './listSchemas';
 
 const farmField = { farm_id: z.string().uuid().optional() };
-const pageSchema = z.object({
-  ...farmField,
-  skip: z.number().int().min(0).optional(),
-  take: z.number().int().min(1).max(200).optional(),
-});
 const requestSchema = z.object({
   ...farmField,
   request_id: z.string().uuid(),
@@ -41,10 +37,7 @@ export const confirmBirthEvent = async (
 };
 
 export const listBirthEvents = async (client: RanchBotApiClient, farmId: string, args: unknown) => {
-  const { farm_id, ...input } = pageSchema
-    .extend({ animal_id: z.string().uuid().optional() })
-    .strict()
-    .parse(args);
+  const { farm_id, ...input } = paginatedToolSchemas.list_birth_events.parse(args);
   return client.listBirthEvents(farm(farm_id, farmId), input);
 };
 
@@ -69,10 +62,7 @@ export const getBirthSourceEvidence = async (
 };
 
 export const listFarmTasks = async (client: RanchBotApiClient, farmId: string, args: unknown) => {
-  const { farm_id, ...input } = pageSchema
-    .extend({ status: taskStatus.optional() })
-    .strict()
-    .parse(args);
+  const { farm_id, ...input } = paginatedToolSchemas.list_farm_tasks.parse(args);
   return client.listFarmTasks(farm(farm_id, farmId), input);
 };
 
@@ -98,7 +88,7 @@ export const listProtocolVersions = async (
   farmId: string,
   args: unknown,
 ) => {
-  const { farm_id, ...input } = pageSchema.strict().parse(args);
+  const { farm_id, ...input } = paginatedToolSchemas.list_protocol_versions.parse(args);
   return client.listProtocolVersions(farm(farm_id, farmId), input);
 };
 

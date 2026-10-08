@@ -41,7 +41,7 @@ export const initiateDeviceFlow = async (): Promise<DeviceCodeResponse> => {
     const response = await axios.post(DEVICE_CODE_ENDPOINT, {
       client_id: requireClientId(),
       scope:
-        'read:farms read:animals write:animals read:records write:records read:groups write:groups read:exports' +
+        'read:farms write:farms read:animals write:animals read:records write:records read:groups write:groups read:exports' +
         (ADMIN_MODE ? ' admin:imports' : ''),
     });
 

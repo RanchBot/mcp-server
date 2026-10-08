@@ -1,11 +1,9 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { birthBundleInputSchema } from '../../generated/birthBundleSchema';
+import { toInputSchema } from './inputSchemas';
+import { paginatedToolSchemas } from './listSchemas';
 
 const farm = { farm_id: { type: 'string', format: 'uuid' } };
-const page = {
-  skip: { type: 'integer', minimum: 0 },
-  take: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
-};
 const request = {
   ...farm,
   request_id: {
@@ -28,6 +26,16 @@ const define = (
   annotations: { readOnlyHint: readOnly, destructiveHint: false, idempotentHint: true },
 });
 
+const defineList = (
+  name: 'list_birth_events' | 'list_farm_tasks' | 'list_protocol_versions',
+  description: string,
+): Tool => ({
+  name,
+  description,
+  inputSchema: toInputSchema(paginatedToolSchemas[name]),
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+});
+
 export const birthEventTools: Tool[] = [
   define(
     'preview_birth_event',
@@ -43,12 +51,9 @@ export const birthEventTools: Tool[] = [
     ['request_id', 'bundle', 'confirmation_hash'],
     false,
   ),
-  define(
+  defineList(
     'list_birth_events',
     'List saved birth events with bounded pagination, optionally filtered by dam or offspring.',
-    { ...farm, ...page, animal_id: { type: 'string', format: 'uuid' } },
-    [],
-    true,
   ),
   define(
     'get_birth_event',
@@ -64,13 +69,7 @@ export const birthEventTools: Tool[] = [
     ['source_sms_id'],
     true,
   ),
-  define(
-    'list_farm_tasks',
-    'List farm follow-up work, including undated todos.',
-    { ...farm, ...page, status: { type: 'string', enum: ['TODO', 'DONE', 'CANCELLED'] } },
-    [],
-    true,
-  ),
+  defineList('list_farm_tasks', 'List farm follow-up work, including undated todos.'),
   define(
     'update_farm_task',
     'After producer approval, update task status and optionally its due date. An explicit null clears the date; omission preserves it.',
@@ -83,12 +82,9 @@ export const birthEventTools: Tool[] = [
     ['task_id', 'status'],
     false,
   ),
-  define(
+  defineList(
     'list_protocol_versions',
     'List immutable farm protocol definitions with bounded pagination. Never invent missing steps.',
-    { ...farm, ...page },
-    [],
-    true,
   ),
   define(
     'create_protocol_version',

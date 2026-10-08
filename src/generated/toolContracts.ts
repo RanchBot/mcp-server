@@ -96,7 +96,7 @@ export const generatedCrudTools: Tool[] = [
         },
         "birth_date": {
           "type": "string",
-          "description": "Date of birth as an ISO date (YYYY-MM-DD). Derive it from an age if the user gives one."
+          "description": "Exact date of birth as an ISO date (YYYY-MM-DD). Supply it only when the user states the date itself. If the user gives an approximate age instead, omit this field and keep that age wording in notes; never calculate or estimate a birthday from an age. On update, leave an existing birth_date and unrelated notes unchanged."
         },
         "notes": {
           "type": "string",
@@ -161,7 +161,7 @@ export const generatedCrudTools: Tool[] = [
         },
         "birth_date": {
           "type": "string",
-          "description": "Date of birth as an ISO date (YYYY-MM-DD). Derive it from an age if the user gives one."
+          "description": "Exact date of birth as an ISO date (YYYY-MM-DD). Supply it only when the user states the date itself. If the user gives an approximate age instead, omit this field and keep that age wording in notes; never calculate or estimate a birthday from an age. On update, leave an existing birth_date and unrelated notes unchanged."
         },
         "notes": {
           "type": "string",

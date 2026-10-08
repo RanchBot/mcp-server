@@ -87,8 +87,9 @@ a mutation.
 
 ## Preview and confirm a birth
 
-A birth is saved only through `preview_birth_event` followed by `confirm_birth_event`, using the
-producer-approved exact preview tuple. Required inputs: the farm, a stable `request_id` UUID, and a
+The direct-bundle compatibility path uses `preview_birth_event` followed by `confirm_birth_event`,
+using the producer-approved exact preview tuple. For a farm-selected template, use the configured
+workflow below instead. Both paths use the same birth writer; never switch paths to bypass a denial. Required inputs: the farm, a stable `request_id` UUID, and a
 `bundle` (dam, offspring, dates, and any protocol or evidence references). `confirmation_hash` is
 added only at confirmation.
 
@@ -125,26 +126,123 @@ producer-provided immutable steps; never invent care instructions.
 
 ## Run a configured birth workflow
 
-A farm can configure a versioned `record_birth` template (labels, visibility, requiredness, literal
-and `today` defaults, units, and custom observations). A template never changes the meaning or the
-indispensable review controls of a core birth field.
+Use a farm's `record_birth` template to collect a lambing record with its chosen labels, units,
+defaults, and custom observations. The template cannot change core field meaning or remove required
+review controls. Discover these tools in the connected server before relying on them. This source
+example does not change the recommended release or prove production availability.
 
-1. **Preview** with `preview_workflow` (`request_id`, `template_id`, `inputs.event`,
-   `inputs.offspring`, and `timezone` whenever a `today` default is resolved). It returns a
-   non-committable preview and saves no farm data. A preview that needs a timezone comes back with a
-   `missing_timezone` issue instead of committing.
-2. **Review and approve** every resolved field and custom answer with the producer.
-3. **Commit** with `commit_workflow` and the exact `preview_hash`. Pass
-   `{approval:{confirmed:true, preview_hash}}`; a stale hash returns a conflict and writes nothing.
-   Commit reuses the same atomic birth writer as `confirm_birth_event`.
-4. **Read back** with `get_workflow_preview` or the saved birth reads. Discard an uncommitted preview
-   with `discard_workflow`.
+### Access and fresh authorization
 
-Template configuration uses `list_workflow_templates`, `get_workflow_template`,
-`create_workflow_template`, `publish_workflow_template_version`, `update_workflow_template_state`,
-and `set_default_workflow_template`. Only Owners create, publish versions, archive/reactivate, or
-select the default; reads use `read:farms` and configuration writes use `write:farms`. Archiving the
-default requires an active replacement in the same transaction.
+Owners configure templates. Editors and Owners can preview and commit births; Readers cannot.
+Template reads need `read:farms`; configuration needs `write:farms`. Preview/read/discard use
+`read:records`; birth commit needs `write:records`, `write:animals`, and `write:groups` together.
+A scope never grants a higher farm role or cross-farm access.
+
+After upgrading to a client whose login requests `write:farms`, run `ranchbot-mcp login` and approve
+a fresh authorization if the old grant lacks it. Refresh preserves existing scopes; it cannot add
+access. If a fresh login still lacks the scope, stop and seek support. Do not switch to an admin
+session or another interface to get around a denial.
+
+### Configure once, then use the template
+
+1. List templates with `list_workflow_templates` and read the chosen starter with
+   `get_workflow_template`. Sheep farms have Detailed and Minimal lambing starters. Work from its
+   `current_version.definition`, not a guessed schema.
+2. Show the Owner the full proposed definition, including every default and unit, before writing.
+   `create_workflow_template` takes `{farm_id, definition, is_default?}` and creates the template
+   **and published version 1**. It is not a draft waiting for a publish call.
+3. Later changes use `publish_workflow_template_version` with `{farm_id, template_id,
+expected_current_version, definition}`. The expected number is the current version read from the
+   server. Publishing version 2 preserves immutable version 1. Read again after a version conflict;
+   do not silently overwrite another Owner's changes.
+4. Default selection and archival are separate operations. Use `set_default_workflow_template` or
+   `update_workflow_template_state` with the current `expected_metadata_revision`. Archiving the
+   default requires an active replacement. The example below does not change the farm default.
+
+### Field keys are literal
+
+`inputs.event` is one object; `inputs.offspring` is an array of objects. Use each definition's full
+`key`, not its display label. Dots in keys do not create nested objects.
+
+| Definition key and scope                           | Input location                                     | Example value                                             |
+| -------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------- |
+| `dam_id`, event                                    | `inputs.event.dam_id`                              | Dam UUID                                                  |
+| `birth_date`, event                                | `inputs.event.birth_date`                          | `"2026-10-01"`                                            |
+| `groups`, event                                    | `inputs.event.groups`                              | Array of group UUIDs                                      |
+| `lambing_ease`, event custom choice                | `inputs.event.lambing_ease`                        | `"assisted"`, a choice key, not its label                 |
+| `offspring.sex`, offspring                         | `inputs.offspring[0]["offspring.sex"]`             | `"female"`                                                |
+| `offspring.birth_weight`, offspring                | `inputs.offspring[0]["offspring.birth_weight"]`    | `4.2`; unit comes from the template                       |
+| `offspring.identifiers`, offspring                 | `inputs.offspring[0]["offspring.identifiers"]`     | `[{"type":"MANAGEMENT_TAG","value":"0042"}]`              |
+| `offspring.fostering_notes`, offspring custom text | `inputs.offspring[0]["offspring.fostering_notes"]` | `"Bottle lamb"`; an observation, not a foster-parent link |
+
+The tested [payload builders](examples/birthPayloads.cjs) use these keys. They omit `lambing_ease`
+so the approved literal default resolves at preview. An explicit answer overrides the default;
+an explicit clear is not an omitted answer. Unknown keys and invalid answers are errors. A `today`
+default needs an explicit IANA `timezone`, such as `America/Edmonton`; do not guess it. The resulting
+`proposed_changes.bundle` contains normalized birth values, such as `{value:4.2,unit:"kg"}`. Do not
+send that normalized bundle as template inputs or convert existing answers when publishing new units.
+
+### Preview, approve, save, verify
+
+1. Call `preview_workflow` with `farm_id`, a new stable `request_id`, `template_id`, and `inputs`.
+   `template_version` is optional: omission pins the current immutable version once. A preview stores
+   review state but creates no livestock records. Stop on invalid status or blocking validation issues.
+2. Display the **entire** returned preview: `template_version`, `resolved_values`, `default_sources`,
+   `validation_issues`, `review`, `proposed_changes`, expiry, and `preview_hash`. Include defaults,
+   hidden supplied values, units, custom answers, identity/history and identifier warnings. Obtain
+   explicit approval for that exact review, not for an earlier input file.
+3. Read `get_workflow_preview` before saving. If its status or hash no longer matches, stop.
+   Call `commit_workflow` with `{farm_id, preview_id, approval:{confirmed:true, preview_hash}}`.
+   It accepts no replacement inputs. Approval is an attestation, not proof that a human clicked.
+4. Read `get_workflow_preview`, `get_birth_event`, `get_record`, and the created animals. Verify saved
+   values, identifiers, group links, and `workflow_template_id` / `workflow_template_version_id`.
+
+A newer template publication alone does not invalidate an unexpired pinned preview. A relevant-state
+change, expiry, archival, or mismatched approval can reject commit without new domain writes. After
+rejection, inspect the reason and create a fresh preview with renewed approval only when appropriate.
+After an **uncertain** commit, read the existing preview first. A committed status returns the saved
+outcome. If still pending or unreadable, stop and reconcile; never automatically create a new request
+or switch to direct birth tools. An explicitly approved retry of the same successful preview returns
+the same receipt without another birth. Saved-birth correction remains unsupported.
+
+### Run the example on a disposable farm
+
+The [runnable example](examples/configured-birth.cjs) is for a disposable, loopback, cloud-auth API
+and a sheep farm with an existing dam and group. It refuses a production origin. Do not point a
+local tunnel at production. Use a separate test account/token home and sign in to that test origin
+with `ranchbot-mcp login` first. No tokens go in the input file or tool arguments.
+
+From this built source package, or the installed package directory, save this as `input.json`.
+Replace the UUIDs with the intended **test** farm, dam, and group. The female lamb and 4.2 weight
+are made-up example values, not advice or observations about your farm.
+
+```json
+{
+  "disposable": true,
+  "farmId": "11111111-1111-4111-8111-111111111111",
+  "damId": "22222222-2222-4222-8222-222222222222",
+  "groupId": "33333333-3333-4333-8333-333333333333",
+  "date": "2026-10-01",
+  "tag": "0042",
+  "notes": "Bottle lamb",
+  "name": "Example lambing",
+  "unit": "kg",
+  "ease": "unassisted"
+}
+```
+
+```bash
+RANCHBOT_API_URL=http://127.0.0.1:7004 node docs/examples/configured-birth.cjs input.json
+```
+
+The example reads a starter, customizes labels/defaults/units/custom observations, asks approval to
+create version 1 and publish version 2, then displays the full birth review. Type the requested
+approval only after checking it. A second approval saves one birth, followed by saved-record reads.
+Cancelling the birth leaves the published configuration and uncommitted preview, not a saved birth.
+Keep the printed template/preview IDs. Do not rerun the whole example after a partial or uncertain
+write: it would create another template/request. Its commit-error recovery reads status once and
+never automatically re-commits. Real persistence acceptance reuses this packaged example and its
+payload builders; test approval is not live human approval.
 
 ## Pagination
 

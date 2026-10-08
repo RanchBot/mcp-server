@@ -42,7 +42,10 @@ describe('toolRegistry', () => {
     expect(getToolHandlerPath('list_my_farms')).toBe('./tools/list_my_farms.js');
   });
 
-  it('getToolHandlerPath returns undefined for unknown tools', () => {
-    expect(getToolHandlerPath('unknown_tool')).toBeUndefined();
-  });
+  it.each(['unknown_tool', 'constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'getToolHandlerPath returns undefined for unregistered name %s',
+    (name) => {
+      expect(getToolHandlerPath(name)).toBeUndefined();
+    },
+  );
 });

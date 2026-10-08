@@ -8,13 +8,13 @@ Requirements: Node.js 22 or newer, a Ranch.Bot account, and access to a farm.
 
 ## Install and sign in
 
-These commands install this source package's version (0.1.5). For the recommended public release,
+These commands install this source package's version (0.1.6). For the recommended public release,
 use the pinned command on [MCP setup](https://ranch.bot/docs/mcp-setup), the source of truth for
 setup; release status and promotion rules live in [MAINTAINING.md](MAINTAINING.md). Stop older CLI
 and MCP processes before upgrading; never remove their active lock files.
 
 ```bash
-npm install -g @ranchbot/mcp-server@0.1.5
+npm install -g @ranchbot/mcp-server@0.1.6
 ranchbot-mcp --version
 ranchbot-mcp login
 ```
@@ -80,7 +80,10 @@ Farms can configure a versioned `record_birth` template that drives the shared
 `preview_workflow` → approval → `commit_workflow` flow. The `list_workflow_templates`,
 `get_workflow_template`, `create_workflow_template`, `publish_workflow_template_version`,
 `update_workflow_template_state`, and `set_default_workflow_template` tools manage that
-configuration (Owner writes). Commit requires the exact `preview_hash` read back from a fresh
+configuration (Owner writes with `write:farms`). After upgrading from a login that lacks
+`write:farms`, run `ranchbot-mcp login` and approve a fresh authorization. Refresh preserves the
+existing grant; it cannot add scopes. A new grant does not elevate your farm role.
+Commit requires the exact `preview_hash` read back from a fresh
 preview; a stale hash is rejected. Templates change
 labels, visibility, defaults, and custom observations only — the meaning and review controls of
 core birth fields do not change. See the [workflow guide](docs/workflows.md) for the run and

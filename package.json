@@ -1,6 +1,6 @@
 {
   "name": "@ranchbot/mcp-server",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Local MCP server for Ranch.Bot livestock recordkeeping.",
   "mcpName": "bot.ranch/mcp-server",
   "main": "dist/index.js",
@@ -20,7 +20,7 @@
     "build": "tsc -p tsconfig.build.json",
     "check:versions": "node scripts/release/main.mjs check-versions",
     "dev": "tsx watch src/index.ts",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"docs/examples/*.cjs\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
@@ -57,13 +57,16 @@
     "axios": "^1.6.7",
     "dotenv": "^16.4.4",
     "fs-native-extensions": "1.5.0",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",

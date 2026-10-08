@@ -25,7 +25,7 @@ npm run check:versions
 - `npm ci` installs the pinned dependencies from `package-lock.json`.
 - `build` compiles to `dist/` with `tsc -p tsconfig.build.json`.
 - `typecheck` runs `tsc --noEmit`.
-- `lint` and `prettier` check `src` and the whole package.
+- `lint` checks `src` and the runnable examples; `prettier` checks the whole package.
 - `test` runs the Jest unit suite under `src/__tests__/unit`.
 - `test:release` runs the Node test files in `scripts/release`.
 - `check:versions` verifies `package.json`, both `package-lock.json` version fields, `server.json`,
@@ -56,6 +56,12 @@ Representative suites:
 | [`tokenLockProcesses.test.ts`](../src/__tests__/unit/tokenLockProcesses.test.ts) | Real child processes exercising native-lock crash recovery.                                               |
 | [`serverFactory.test.ts`](../src/__tests__/unit/serverFactory.test.ts)           | The locked tool surface, farm resolution, and per-call routing over an in-memory transport.               |
 | [`animalLookupClient.test.ts`](../src/__tests__/unit/animalLookupClient.test.ts) | Read-only EID lookup makes zero write requests.                                                           |
+
+The configured-birth example tests exercise approval cancellation, exact hash forwarding, field
+payloads, loopback-only execution and read-first recovery after an uncertain commit. Real-backend
+acceptance also executes the packaged example through the installed stdio client. See the
+[example and field guide](workflows.md#run-a-configured-birth-workflow); unit mocks alone are not
+persistence evidence.
 
 ### What the unit suite does and does not prove
 

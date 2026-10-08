@@ -1,12 +1,7 @@
-import { z } from 'zod';
+import { paginatedToolSchemas } from './_shared/listSchemas';
 import { RanchBotApiClient } from '../client';
 
-const argsSchema = z.object({
-  farm_id: z.string().optional(),
-  skip: z.coerce.number().optional(),
-  take: z.coerce.number().optional(),
-  type: z.string().optional(),
-});
+const argsSchema = paginatedToolSchemas.list_records;
 
 export async function handleTool(client: RanchBotApiClient, farmId: string, args: any) {
   const validated = argsSchema.parse(args);

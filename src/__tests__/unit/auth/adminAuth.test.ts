@@ -6,7 +6,7 @@ jest.mock('dotenv', () => ({ config: jest.fn() }));
 
 const mockedAxios = jest.mocked(axios);
 const farmScopes =
-  'read:farms read:animals write:animals read:records write:records read:groups write:groups read:exports';
+  'read:farms write:farms read:animals write:animals read:records write:records read:groups write:groups read:exports';
 
 it.each([
   { mode: 'ordinary', args: [], configuredClient: 'farm-client', expectedClient: 'farm-client' },

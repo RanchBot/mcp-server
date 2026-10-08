@@ -91,5 +91,7 @@ export const toolRegistry: Record<string, string> = {
  * Get the handler module path for a tool
  */
 export function getToolHandlerPath(toolName: string): string | undefined {
-  return toolRegistry[toolName];
+  return Object.prototype.hasOwnProperty.call(toolRegistry, toolName)
+    ? toolRegistry[toolName]
+    : undefined;
 }

@@ -37,7 +37,8 @@ ranchbot <group> <command> --help
 
 Common groups include `farms`, `animals`, `identifiers`, `groups`, `records`, `chute`, `rations`,
 `feedings`, `memory`, `birth-events`, `birth-history`, `birth-sources`, `farm-tasks`, `protocols`,
-and `exports`. Run the command-specific help before relying on a flag.
+and `exports`. Supporting releases also expose `workflow-templates` and `workflows`; see
+[configured births](workflows.md). Run the command-specific help before relying on a flag.
 
 ## Resolve the farm
 
@@ -86,5 +87,6 @@ while clients are running, and stop older CLI/MCP processes before upgrading.
 ## Related references
 
 - MCP equivalent: [mcp.md](mcp.md)
-- Birth workflow: [birth-events.md](birth-events.md)
+- Template-configured births: [workflows.md](workflows.md)
+- Direct-bundle birth compatibility: [birth-events.md](birth-events.md)
 - Archive workflow: [exports.md](exports.md)

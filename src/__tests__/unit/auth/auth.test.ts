@@ -41,7 +41,7 @@ describe('auth', () => {
       expect(mockedAxios.post).toHaveBeenCalledWith(DEVICE_CODE_ENDPOINT, {
         client_id: 'test-client-id',
         scope:
-          'read:farms read:animals write:animals read:records write:records read:groups write:groups read:exports',
+          'read:farms write:farms read:animals write:animals read:records write:records read:groups write:groups read:exports',
       });
 
       expect(result).toEqual({

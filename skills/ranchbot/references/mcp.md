@@ -46,9 +46,12 @@ you, or authorize farm operations.
 ## Discover tools
 
 Read the connected server's tool list and each tool's input schema — do not assume a tool from
-Ranch.Bot source exists in the installed release. `preview_birth_event` and the archive operations
-are capability-dependent; if the connected release does not expose them, stop and explain instead
-of substituting another write.
+Ranch.Bot source exists in the installed release. Template configuration, `preview_workflow`,
+`commit_workflow`, `preview_birth_event`, and archive operations are capability-dependent. If the
+connected release lacks them, stop and explain instead of substituting another write.
+
+For templates, read [configured births](workflows.md), including exact field keys and fresh login
+when an old grant lacks `write:farms`. Refresh does not add scopes or raise a farm role.
 
 ## Farm context
 
@@ -79,5 +82,6 @@ creation. `farm_archive` mixes reads with job creation, cancellation, and a loca
 ## Related references
 
 - CLI equivalent: [cli.md](cli.md)
-- Birth workflow: [birth-events.md](birth-events.md)
+- Template-configured births: [workflows.md](workflows.md)
+- Direct-bundle birth compatibility: [birth-events.md](birth-events.md)
 - Archive workflow: [exports.md](exports.md)

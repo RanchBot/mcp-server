@@ -21,6 +21,9 @@ export const tarball = {
     'SECURITY.md',
     'LICENSE',
     'docs/workflows.md',
+    'docs/examples/configured-birth.cjs',
+    'docs/examples/birthPayloads.cjs',
+    'skills/ranchbot/references/workflows.md',
     'docs/architecture.md',
     'docs/development.md',
     'docs/troubleshooting.md',
@@ -48,6 +51,7 @@ export const publicDocuments = [
   'skills/ranchbot/references/cli.md',
   'skills/ranchbot/references/mcp.md',
   'skills/ranchbot/references/birth-events.md',
+  'skills/ranchbot/references/workflows.md',
   'skills/ranchbot/references/exports.md',
 ];
 

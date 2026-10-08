@@ -13,6 +13,10 @@
   },
   "overrides": [
     {
+      "files": ["docs/examples/*.cjs"],
+      "rules": { "@typescript-eslint/no-var-requires": "off" }
+    },
+    {
       "files": ["**/__tests__/**/*.ts"],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",

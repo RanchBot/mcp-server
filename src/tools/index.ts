@@ -3,6 +3,8 @@ import { generatedCrudTools } from '../generated/toolContracts.js';
 import { birthHistoryTools } from './_shared/birthHistoryTools';
 import { birthEventTools } from './_shared/birthEventTools';
 import { workflowTools } from './workflowTools';
+import { setDefaultFarmSchema, toInputSchema } from './_shared/inputSchemas';
+import { paginatedToolSchemas } from './_shared/listSchemas';
 
 /**
  * MCP-only tools. The shared CRUD tools (animals/groups/records/identifiers) are generated from
@@ -57,16 +59,7 @@ const mcpOnlyTools: Tool[] = [
     name: 'set_default_farm',
     description:
       'Change the saved default farm for later calls on this session. This changes context, not farm data; it is unnecessary when every scoped call passes farm_id explicitly, and it should be used only when the user asks.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        farm_id: {
-          type: 'string',
-          description: 'The ID of the farm to set as default',
-        },
-      },
-      required: ['farm_id'],
-    },
+    inputSchema: toInputSchema(setDefaultFarmSchema),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
   {
@@ -169,18 +162,7 @@ const mcpOnlyTools: Tool[] = [
     name: 'list_pending_imports',
     description:
       'List concierge import requests across all farms (admin only). Defaults to PENDING status.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        status: {
-          type: 'string',
-          enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'],
-          description: 'Filter by status (default PENDING)',
-        },
-        skip: { type: 'number', description: 'Pagination offset' },
-        take: { type: 'number', description: 'Page size' },
-      },
-    },
+    inputSchema: toInputSchema(paginatedToolSchemas.list_pending_imports),
     annotations: { readOnlyHint: true },
   },
   {
@@ -236,5 +218,8 @@ export function registerTools(): Tool[] {
     ...birthEventTools,
     ...birthHistoryTools,
     ...workflowTools,
-  ];
+  ].map((tool) => {
+    const schema = paginatedToolSchemas[tool.name as keyof typeof paginatedToolSchemas];
+    return schema ? { ...tool, inputSchema: toInputSchema(schema) } : tool;
+  });
 }

@@ -5,6 +5,11 @@ creates offspring, dam relationships, care records, tasks, and evidence links in
 Availability is capability-dependent: if the connected release does not expose the birth commands
 or tools, stop and explain — do not fall back to generic animal or record writes.
 
+This reference describes the **direct-bundle compatibility path**. For a farm-selected template,
+use [configured births](workflows.md): literal definition keys, resolved defaults/units,
+`preview_workflow` and `commit_workflow`. Do not switch paths to bypass a denial or recover an
+uncertain save. Both paths share the birth writer and the correction boundary below.
+
 ## Preview
 
 Send a caller-generated `request_id` UUID and the complete `bundle`. Preview reads current identity,

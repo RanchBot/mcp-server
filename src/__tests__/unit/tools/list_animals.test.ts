@@ -9,8 +9,8 @@ describe('list_animals tool', () => {
     } as any);
 
     const result = await listAnimals(client, 'farm-1', {
-      skip: '1',
-      take: '10',
+      skip: 1,
+      take: 10,
     });
 
     expect(client.listAnimals).toHaveBeenCalledWith('farm-1', {

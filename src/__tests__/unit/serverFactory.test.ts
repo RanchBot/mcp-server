@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { createRanchBotServer, ServerDeps } from '../../serverFactory';
 import { SERVER_INSTRUCTIONS } from '../../serverInstructions';
 import { RanchBotApiClient } from '../../client';
@@ -142,10 +143,55 @@ describe('createRanchBotServer', () => {
       persistDefaultFarm: persist,
     });
     const { client } = await connect(deps)();
-    await client.callTool({ name: 'set_default_farm', arguments: { farm_id: 'farm-42' } });
-    expect(persist).toHaveBeenCalledWith(expect.anything(), 'farm-42');
+    const farmId = '00000000-0000-4000-8000-000000000042';
+    await client.callTool({ name: 'set_default_farm', arguments: { farm_id: farmId } });
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(persist).toHaveBeenCalledWith(expect.anything(), farmId);
+    expect(deps.resolveDefaultFarm).not.toHaveBeenCalled();
     await client.close();
   });
+
+  it.each([
+    undefined,
+    {},
+    { farm_id: null },
+    { farm_id: '' },
+    { farm_id: '   ' },
+    { farm_id: 42 },
+    { farm_id: {} },
+    { farm_id: 'not-a-uuid' },
+  ])('rejects invalid explicit default %j before authentication or persistence', async (args) => {
+    const deps = depsWith({ resolveDefaultFarm: jest.fn().mockResolvedValue('existing-farm') });
+    const { client } = await connect(deps)();
+    try {
+      await expect(
+        client.callTool({ name: 'set_default_farm', arguments: args }),
+      ).rejects.toThrow();
+      expect(deps.persistDefaultFarm).not.toHaveBeenCalled();
+      expect(deps.resolveDefaultFarm).not.toHaveBeenCalled();
+      expect(deps.getClient).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+    }
+  });
+
+  it.each(['unknown', 'constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'rejects unknown tool %s before authentication or farm resolution',
+    async (name) => {
+      const deps = depsWith();
+      const { client } = await connect(deps)();
+      try {
+        await expect(client.callTool({ name, arguments: {} })).rejects.toMatchObject({
+          code: ErrorCode.MethodNotFound,
+        });
+        expect(deps.getClient).not.toHaveBeenCalled();
+        expect(deps.resolveDefaultFarm).not.toHaveBeenCalled();
+        expect(deps.persistDefaultFarm).not.toHaveBeenCalled();
+      } finally {
+        await client.close();
+      }
+    },
+  );
 
   it('passes an explicit farm_id through without resolving the default', async () => {
     const mockClient = createMockClient();

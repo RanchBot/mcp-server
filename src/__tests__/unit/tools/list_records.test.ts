@@ -9,8 +9,8 @@ describe('list_records tool', () => {
     } as any);
 
     const result = await listRecords(client, 'farm-1', {
-      skip: '1',
-      take: '10',
+      skip: 1,
+      take: 10,
       type: 'HEALTH',
     });
 

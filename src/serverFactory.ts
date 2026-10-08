@@ -10,6 +10,7 @@ import { SERVER_INSTRUCTIONS } from './serverInstructions';
 import { getToolHandlerPath } from './toolRegistry';
 import { registerTools } from './tools';
 import { PACKAGE_VERSION } from './version';
+import { toolInputSchemas } from './tools/_shared/toolInputSchemas';
 
 /**
  * Tools that are not farm-scoped: they work across farms (or, for the admin
@@ -55,7 +56,24 @@ export const createRanchBotServer = (deps: ServerDeps): Server => {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const { name } = request.params;
+    let args = request.params.arguments;
+    const toolPath = getToolHandlerPath(name);
+    if (!toolPath) {
+      throw new McpError(ErrorCode.MethodNotFound, `Tool ${name} not found`);
+    }
+
+    const schema = toolInputSchemas[name];
+    if (schema) {
+      const parsed = schema.safeParse(args ?? {});
+      if (!parsed.success) {
+        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+      }
+      args = parsed.data;
+    }
+
+    // Context changes require an explicit validated target, never the saved default.
+    const defaultTarget = name === 'set_default_farm' ? (args?.farm_id as string) : undefined;
 
     let client: RanchBotApiClient;
     try {
@@ -65,7 +83,8 @@ export const createRanchBotServer = (deps: ServerDeps): Server => {
     }
 
     // Effective farm: explicit arg wins, else the stored default.
-    const farmId = (args?.farm_id as string) || (await deps.resolveDefaultFarm(client));
+    const farmId =
+      defaultTarget || (args?.farm_id as string) || (await deps.resolveDefaultFarm(client));
 
     if (!farmId && !FARM_EXEMPT_TOOLS.includes(name)) {
       throw new McpError(
@@ -76,23 +95,12 @@ export const createRanchBotServer = (deps: ServerDeps): Server => {
 
     // Persist a new default when the caller sets one (stdio: in-memory; http: on
     // the API key, so it survives stateless requests).
-    if (name === 'set_default_farm') {
-      const target = (args?.farm_id as string) || farmId;
-      if (target) {
-        try {
-          await deps.persistDefaultFarm(client, target);
-        } catch (error: any) {
-          throw new McpError(
-            ErrorCode.InternalError,
-            `Failed to set default farm: ${error.message}`,
-          );
-        }
+    if (defaultTarget) {
+      try {
+        await deps.persistDefaultFarm(client, defaultTarget);
+      } catch (error: any) {
+        throw new McpError(ErrorCode.InternalError, `Failed to set default farm: ${error.message}`);
       }
-    }
-
-    const toolPath = getToolHandlerPath(name);
-    if (!toolPath) {
-      throw new McpError(ErrorCode.MethodNotFound, `Tool ${name} not found`);
     }
 
     try {

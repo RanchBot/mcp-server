@@ -1,12 +1,7 @@
-import { z } from 'zod';
+import { paginatedToolSchemas } from './_shared/listSchemas';
 import { AnimalInventoryStatus, RanchBotApiClient } from '../client';
 
-const argsSchema = z.object({
-  farm_id: z.string().optional(),
-  skip: z.coerce.number().optional(),
-  take: z.coerce.number().optional(),
-  inventory_status: z.enum(['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED', 'ALL']).optional(),
-});
+const argsSchema = paginatedToolSchemas.list_animals;
 
 export async function handleTool(client: RanchBotApiClient, farmId: string, args: any) {
   const validated = argsSchema.parse(args);
