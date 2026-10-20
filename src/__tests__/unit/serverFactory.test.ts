@@ -10,21 +10,28 @@ import { PACKAGE_VERSION } from '../../version';
 // Locked tool surface: a rename or removal is a breaking change for every MCP client.
 const EXPECTED_TOOL_NAMES = [
   'add_identifier',
+  'add_premises_identifier',
+  'archive_location',
   'commit_workflow',
   'confirm_birth_event',
+  'correct_traceability_event',
   'create_animal',
   'create_chute_session',
   'create_group',
+  'create_location',
   'create_protocol_version',
   'create_ration',
   'create_record',
+  'create_traceability_event',
   'create_workflow_template',
   'delete_animal',
   'delete_group',
+  'delete_premises_identifier',
   'delete_record',
   'discard_workflow',
   'farm_archive',
   'find_animal_by_identifier',
+  'find_identifier_history',
   'find_or_create_animal_by_eid',
   'get_animal',
   'get_birth_event',
@@ -37,8 +44,11 @@ const EXPECTED_TOOL_NAMES = [
   'get_feeding',
   'get_group',
   'get_import_request',
+  'get_location',
   'get_ration',
   'get_record',
+  'get_traceability_event',
+  'get_traceability_event_revisions',
   'get_workflow_preview',
   'get_workflow_template',
   'list_animals',
@@ -48,29 +58,39 @@ const EXPECTED_TOOL_NAMES = [
   'list_feedings',
   'list_groups',
   'list_identifiers',
+  'list_locations',
   'list_memories',
   'list_my_farms',
   'list_pending_imports',
   'list_protocol_versions',
   'list_rations',
   'list_records',
+  'list_traceability_events',
   'list_workflow_templates',
   'lookup_animal_by_eid',
   'preview_birth_event',
   'preview_workflow',
   'publish_workflow_template_version',
+  'recent_transport_suggestions',
   'remove_identifier',
   'restore_group',
+  'restore_location',
   'set_birth_history_settings',
   'set_default_farm',
   'set_default_workflow_template',
+  'set_home_location',
+  'traceability_report',
   'update_animal',
   'update_chute_session',
   'update_farm_task',
   'update_group',
+  'update_group_membership',
   'update_import_request_status',
+  'update_location',
+  'update_premises_identifier',
   'update_record',
   'update_workflow_template_state',
+  'void_traceability_event',
 ];
 
 /**
@@ -111,6 +131,22 @@ describe('createRanchBotServer', () => {
     expect(result.tools.length).toBeGreaterThan(10);
     expect(result.tools.map((t) => t.name)).toContain('list_animals');
     await client.close();
+  });
+
+  it('advertises a nonblank annotation title equal to the top-level title on every tool', async () => {
+    const deps = depsWith();
+    const { client } = await connect(deps)();
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.length).toBe(EXPECTED_TOOL_NAMES.length);
+      for (const tool of tools) {
+        expect(typeof tool.title).toBe('string');
+        expect((tool.title ?? '').trim().length).toBeGreaterThan(0);
+        expect(tool.annotations?.title).toBe(tool.title);
+      }
+    } finally {
+      await client.close();
+    }
   });
 
   it('requires a farm for a farm-scoped tool when no default is set', async () => {
@@ -175,23 +211,32 @@ describe('createRanchBotServer', () => {
     }
   });
 
-  it.each(['unknown', 'constructor', 'toString', '__proto__', 'hasOwnProperty'])(
-    'rejects unknown tool %s before authentication or farm resolution',
-    async (name) => {
-      const deps = depsWith();
-      const { client } = await connect(deps)();
-      try {
-        await expect(client.callTool({ name, arguments: {} })).rejects.toMatchObject({
-          code: ErrorCode.MethodNotFound,
-        });
-        expect(deps.getClient).not.toHaveBeenCalled();
-        expect(deps.resolveDefaultFarm).not.toHaveBeenCalled();
-        expect(deps.persistDefaultFarm).not.toHaveBeenCalled();
-      } finally {
-        await client.close();
-      }
-    },
-  );
+  it.each([
+    'unknown',
+    'constructor',
+    'toString',
+    '__proto__',
+    'hasOwnProperty',
+    './tools/get_animal',
+    '../tools/get_animal',
+    '../../etc/passwd',
+    '/etc/passwd',
+    'node:fs',
+    'tools/get_animal',
+  ])('rejects unknown tool %s before authentication or farm resolution', async (name) => {
+    const deps = depsWith();
+    const { client } = await connect(deps)();
+    try {
+      await expect(client.callTool({ name, arguments: {} })).rejects.toMatchObject({
+        code: ErrorCode.MethodNotFound,
+      });
+      expect(deps.getClient).not.toHaveBeenCalled();
+      expect(deps.resolveDefaultFarm).not.toHaveBeenCalled();
+      expect(deps.persistDefaultFarm).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+    }
+  });
 
   it('passes an explicit farm_id through without resolving the default', async () => {
     const mockClient = createMockClient();
@@ -220,7 +265,7 @@ describe('createRanchBotServer', () => {
     await client.close();
   });
 
-  it('exposes the saved-birth correction boundary on the always-on MCP surface', async () => {
+  it('discovers birth capture and amendment without re-recording saved births', async () => {
     const deps = depsWith();
     const { client } = await connect(deps)();
 
@@ -233,12 +278,22 @@ describe('createRanchBotServer', () => {
     // and tool descriptions, but never the optional Agent Skill. These surfaces keep the
     // essential boundary; the full recovery rationale lives in the skill's birth-events reference.
     for (const surface of [instructions, preview.description ?? '', confirm.description ?? '']) {
-      expect(surface).toMatch(/saved birth cannot be corrected/i);
-      expect(surface).toContain('https://ranch.bot/support');
-      expect(surface).toMatch(/without promising an amendment/i);
+      expect(surface).toMatch(/preview_workflow.*amend_birth/i);
+      expect(surface).toMatch(/record_id, expected_revision and reason/i);
+      expect(surface).toMatch(/commit_workflow/i);
+      expect(surface).toMatch(/entered_in_error/i);
+      expect(surface).toMatch(/only when exposed by the connected release/i);
       expect(surface).toMatch(/do not re-record one/i);
       expect(surface).toMatch(/generic edits as a workaround/i);
+      expect(surface).not.toMatch(/saved birth cannot be corrected/i);
     }
+
+    expect(instructions).toMatch(/preview_workflow with operation record_birth/i);
+    expect(instructions).toMatch(/do not prove a human reviewed/i);
+    expect(byName.get('preview_workflow')?.description).toMatch(
+      /amend_birth.*expected_revision.*reason/i,
+    );
+    expect(byName.get('commit_workflow')?.description).toMatch(/read get_workflow_preview first/i);
 
     // Preview: changes are limited to unconfirmed proposals and keep exact approval.
     expect(preview.description).toMatch(/Before confirmation only/i);
@@ -280,9 +335,24 @@ describe('createRanchBotServer', () => {
     const listAnimals = tools.find((t) => t.name === 'list_animals')!;
     expect(Object.keys(listAnimals.inputSchema.properties ?? {}).sort()).toEqual([
       'farm_id',
+      'identifier_type',
       'inventory_status',
+      'match_mode',
+      'query',
       'skip',
       'take',
+    ]);
+    const listRecords = tools.find((t) => t.name === 'list_records')!;
+    expect(Object.keys(listRecords.inputSchema.properties ?? {}).sort()).toEqual([
+      'animal_id',
+      'applied_before',
+      'applied_from',
+      'farm_id',
+      'group_id',
+      'include_group_context',
+      'skip',
+      'take',
+      'type',
     ]);
     const preview = tools.find((t) => t.name === 'preview_birth_event')!;
     expect(preview.inputSchema.required).toEqual(['request_id', 'bundle']);

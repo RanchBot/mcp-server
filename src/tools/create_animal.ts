@@ -10,7 +10,7 @@ const profileFieldSchema = Object.fromEntries(
 
 const argsSchema = z.object({
   farm_id: z.string().optional(),
-  inventory_status: z.enum(['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED']).optional(),
+  inventory_status: z.enum(['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED', 'NOT_MANAGED']).optional(),
   ...profileFieldSchema,
   metadata: z.record(z.string(), z.any()).optional(),
 });

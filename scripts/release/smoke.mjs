@@ -136,10 +136,14 @@ async function stdioSmoke() {
     const confirm = tools.tools.find((tool) => tool.name === 'confirm_birth_event');
     for (const birth of [preview, confirm]) {
       if (
-        !birth?.description.includes('A saved birth cannot be corrected') ||
-        !birth.description.includes('https://ranch.bot/support')
+        !birth?.description.includes('amend_birth') ||
+        !birth.description.includes('expected_revision and reason') ||
+        !birth.description.includes('only when exposed by the connected release') ||
+        !birth.description.includes('Do not re-record one')
       ) {
-        throw new Error('Birth descriptions must preserve the correction boundary');
+        throw new Error(
+          'Birth descriptions must route reviewed amendments without duplicate capture',
+        );
       }
     }
     if (!confirm?.description.includes('confirmation_hash')) {

@@ -6,7 +6,32 @@ import { pipeline } from 'stream/promises';
 import axios, { AxiosInstance } from 'axios';
 import { RANCHBOT_API_URL, API_VERSION } from './config';
 
-export type AnimalInventoryStatus = 'CURRENT' | 'UNKNOWN' | 'SOLD' | 'DECEASED';
+export type AnimalInventoryStatus = 'CURRENT' | 'UNKNOWN' | 'SOLD' | 'DECEASED' | 'NOT_MANAGED';
+
+export interface LocationWrite {
+  name: string;
+  parent_id?: string | null;
+  category?: string | null;
+  context?: string | null;
+  address?: string | null;
+  legal_land_description?: string | null;
+  country?: string | null;
+  province_state?: string | null;
+}
+
+export type LocationPatch = Partial<LocationWrite> & { expected_version?: number };
+
+export interface PremisesIdentifierWrite {
+  scheme: string;
+  scheme_label?: string | null;
+  issuer?: string | null;
+  jurisdiction?: string | null;
+  value: string;
+  source?: string | null;
+  confirmed?: boolean;
+  is_preferred?: boolean;
+  expected_version?: number;
+}
 
 export interface ApiClientOptions {
   accessToken: string;
@@ -237,27 +262,18 @@ export class RanchBotApiClient {
   }
 
   /**
-   * Get the default farm bound to this API key (null if unset). Used by the
-   * stateless HTTP transport to resolve a default farm.
-   */
-  async getDefaultFarm(): Promise<string | null> {
-    const response = await this.client.get('/user/default-farm');
-    return response.data.default_farm_id ?? null;
-  }
-
-  /**
-   * Bind (or clear, with null) the default farm on this API key.
-   */
-  async setDefaultFarm(farmId: string | null): Promise<void> {
-    await this.client.put('/user/default-farm', { farm_id: farmId });
-  }
-
-  /**
    * List animals in a farm
    */
   async listAnimals(
     farmId: string,
-    params?: { skip?: number; take?: number; inventory_status?: AnimalInventoryStatus | 'ALL' },
+    params?: {
+      skip?: number;
+      take?: number;
+      inventory_status?: AnimalInventoryStatus | 'ALL';
+      query?: string;
+      match_mode?: 'exact' | 'partial';
+      identifier_type?: string;
+    },
   ) {
     const response = await this.client.get(`/farm/${farmId}/animals`, {
       params,
@@ -268,8 +284,14 @@ export class RanchBotApiClient {
   /**
    * Get a specific animal
    */
-  async getAnimal(farmId: string, animalId: string) {
-    const response = await this.client.get(`/farm/${farmId}/animals/${animalId}`);
+  async getAnimal(
+    farmId: string,
+    animalId: string,
+    params?: { include_saved_births?: boolean; birth_skip?: number; birth_take?: number },
+  ) {
+    const response = params
+      ? await this.client.get(`/farm/${farmId}/animals/${animalId}`, { params })
+      : await this.client.get(`/farm/${farmId}/animals/${animalId}`);
     return response.data;
   }
 
@@ -385,9 +407,25 @@ export class RanchBotApiClient {
   async updateGroup(
     farmId: string,
     groupId: string,
-    data: { description?: string; name?: string },
+    data: { description?: string; name?: string; animal_ids?: string[] },
   ) {
     const response = await this.client.put(`/farm/${farmId}/groups/${groupId}`, data);
+    return response.data;
+  }
+
+  /**
+   * Explicitly add and remove group members using a reviewed membership fingerprint.
+   */
+  async updateGroupMembership(
+    farmId: string,
+    groupId: string,
+    data: {
+      add_animal_ids?: string[];
+      remove_animal_ids?: string[];
+      membership_fingerprint: string;
+    },
+  ) {
+    const response = await this.client.post(`/farm/${farmId}/groups/${groupId}/membership`, data);
     return response.data;
   }
 
@@ -406,10 +444,169 @@ export class RanchBotApiClient {
     return response.data;
   }
 
+  // Locations and premises identifiers (#381)
+  async listLocations(farmId: string, params?: { include_archived?: boolean }) {
+    const response = await this.client.get(`/farm/${farmId}/locations`, { params });
+    return response.data;
+  }
+
+  async getLocation(farmId: string, locationId: string) {
+    return (await this.client.get(`/farm/${farmId}/locations/${locationId}`)).data;
+  }
+
+  async createLocation(farmId: string, data: LocationWrite) {
+    return (await this.client.post(`/farm/${farmId}/locations`, data)).data;
+  }
+
+  async updateLocation(farmId: string, locationId: string, data: LocationPatch) {
+    return (await this.client.put(`/farm/${farmId}/locations/${locationId}`, data)).data;
+  }
+
+  async archiveLocation(farmId: string, locationId: string, expected_version?: number) {
+    return (
+      await this.client.post(`/farm/${farmId}/locations/${locationId}/archive`, {
+        expected_version,
+      })
+    ).data;
+  }
+
+  async restoreLocation(farmId: string, locationId: string, expected_version?: number) {
+    return (
+      await this.client.post(`/farm/${farmId}/locations/${locationId}/restore`, {
+        expected_version,
+      })
+    ).data;
+  }
+
+  async setHomeLocation(farmId: string, locationId: string) {
+    return (await this.client.put(`/farm/${farmId}/locations/home`, { location_id: locationId }))
+      .data;
+  }
+
+  async clearHomeLocation(farmId: string) {
+    await this.client.delete(`/farm/${farmId}/locations/home`);
+  }
+
+  async addPremisesIdentifier(farmId: string, locationId: string, data: PremisesIdentifierWrite) {
+    return (await this.client.post(`/farm/${farmId}/locations/${locationId}/identifiers`, data))
+      .data;
+  }
+
+  async updatePremisesIdentifier(
+    farmId: string,
+    locationId: string,
+    identifierId: string,
+    data: Partial<PremisesIdentifierWrite>,
+  ) {
+    return (
+      await this.client.put(
+        `/farm/${farmId}/locations/${locationId}/identifiers/${identifierId}`,
+        data,
+      )
+    ).data;
+  }
+
+  async deletePremisesIdentifier(farmId: string, locationId: string, identifierId: string) {
+    await this.client.delete(`/farm/${farmId}/locations/${locationId}/identifiers/${identifierId}`);
+  }
+
+  // Typed traceability events (#381)
+  async createTraceabilityEvent(
+    farmId: string,
+    data: { request_key: string; source?: string | null; payload: unknown },
+  ) {
+    return (await this.client.post(`/farm/${farmId}/traceability-events`, data)).data;
+  }
+
+  async listTraceabilityEvents(
+    farmId: string,
+    params?: {
+      skip?: number;
+      take?: number;
+      kind?: string;
+      movement?: boolean;
+      include_void?: boolean;
+    },
+  ) {
+    return (await this.client.get(`/farm/${farmId}/traceability-events`, { params })).data;
+  }
+
+  async getTraceabilityEvent(farmId: string, eventId: string) {
+    return (await this.client.get(`/farm/${farmId}/traceability-events/${eventId}`)).data;
+  }
+
+  async getTraceabilityEventRevisions(farmId: string, eventId: string) {
+    return (await this.client.get(`/farm/${farmId}/traceability-events/${eventId}/revisions`)).data;
+  }
+
+  async correctTraceabilityEvent(
+    farmId: string,
+    eventId: string,
+    data: {
+      request_key: string;
+      expected_revision: number;
+      reason: string;
+      source?: string | null;
+      payload: unknown;
+    },
+  ) {
+    return (await this.client.post(`/farm/${farmId}/traceability-events/${eventId}/correct`, data))
+      .data;
+  }
+
+  async voidTraceabilityEvent(
+    farmId: string,
+    eventId: string,
+    data: { request_key: string; expected_revision: number; reason: string },
+  ) {
+    return (await this.client.post(`/farm/${farmId}/traceability-events/${eventId}/void`, data))
+      .data;
+  }
+
+  async findIdentifierHistory(
+    farmId: string,
+    params: { value: string; type?: string; include_historical?: boolean },
+  ) {
+    return (await this.client.get(`/farm/${farmId}/traceability-events/history`, { params })).data;
+  }
+
+  async recentTransportSuggestions(farmId: string, params?: { take?: number }) {
+    return (
+      await this.client.get(`/farm/${farmId}/traceability-events/transport-suggestions`, {
+        params,
+      })
+    ).data;
+  }
+
+  async getTraceabilityReport(
+    farmId: string,
+    params?: Record<string, unknown>,
+    format: 'json' | 'csv' = 'json',
+  ) {
+    return (
+      await this.client.get(`/farm/${farmId}/traceability-report`, {
+        params: { ...params, format },
+        responseType: format === 'csv' ? 'text' : 'json',
+      })
+    ).data;
+  }
+
   /**
    * List records in a farm
    */
-  async listRecords(farmId: string, params?: { skip?: number; take?: number; type?: string }) {
+  async listRecords(
+    farmId: string,
+    params?: {
+      skip?: number;
+      take?: number;
+      type?: string;
+      animal_id?: string;
+      group_id?: string;
+      include_group_context?: boolean;
+      applied_from?: string;
+      applied_before?: string;
+    },
+  ) {
     const response = await this.client.get(`/farm/${farmId}/records`, {
       params,
     });

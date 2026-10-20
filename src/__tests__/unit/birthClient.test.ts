@@ -20,7 +20,7 @@ describe('birth event HTTP client', () => {
       response: {
         status: 409,
         data: {
-          message: 'Confirmed birth records and care cannot be edited or deleted individually',
+          message: 'Confirmed birth records cannot be edited or deleted individually',
         },
       },
     };

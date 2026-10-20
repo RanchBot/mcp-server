@@ -1,3 +1,4 @@
+import { generatedCrudTools } from '../../../generated/toolContracts';
 import { createMockClient } from '../testUtils';
 import { handleTool as createRecord } from '../../../tools/create_record';
 
@@ -26,6 +27,16 @@ describe('create_record tool', () => {
     expect(result).toEqual({
       id: 'r1',
       message: 'Record created successfully with ID: r1',
+    });
+  });
+
+  it('publishes the breeding/exposure GENETIC guidance in the generated contract', () => {
+    const tool = generatedCrudTools.find((candidate) => candidate.name === 'create_record')!;
+    expect(tool.description).toMatch(/turnout, mating, breeding or exposure observation/i);
+    expect(tool.description).toMatch(/ram joining a ewe is a GENETIC record/i);
+    expect(tool.description).toMatch(/ewe lambing twins is a propose_birth_event bundle/i);
+    expect(tool.inputSchema.properties!.type).toMatchObject({
+      description: expect.stringMatching(/Use GENETIC for turnout, mating, breeding or exposure/),
     });
   });
 

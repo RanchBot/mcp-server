@@ -22,6 +22,30 @@ describe('update_group tool', () => {
     });
   });
 
+  it('forwards additive animal_ids and reports an ensured-membership outcome', async () => {
+    const client = createMockClient();
+    client.updateGroup.mockResolvedValueOnce({ id: 'g1' } as any);
+
+    const result = await updateGroup(client, 'farm-1', {
+      group_id: 'g1',
+      animal_ids: ['11111111-1111-4111-8111-111111111111'],
+    });
+
+    expect(client.updateGroup).toHaveBeenCalledWith('farm-1', 'g1', {
+      animal_ids: ['11111111-1111-4111-8111-111111111111'],
+    });
+    expect(result.message).toBe('Ensured the requested animals belong to group g1');
+  });
+
+  it('omits animal_ids when not provided', async () => {
+    const client = createMockClient();
+    client.updateGroup.mockResolvedValueOnce({ id: 'g1' } as any);
+
+    await updateGroup(client, 'farm-1', { group_id: 'g1', name: 'New' });
+
+    expect(client.updateGroup).toHaveBeenCalledWith('farm-1', 'g1', { name: 'New' });
+  });
+
   it('throws when farm id is missing', async () => {
     const client = createMockClient();
 

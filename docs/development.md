@@ -98,8 +98,6 @@ Set these environment variables for a development API. The default is the public
 | `COGNITO_DEVICE_CLIENT_ID` | `ranchbot-mcp`                                                     | Public OAuth device client.                       |
 | `API_VERSION`              | `v1`                                                               | API version segment.                              |
 | `RANCHBOT_DEPLOYMENT_MODE` | unset                                                              | Set to `local` for an installation-local account. |
-| `MCP_TRANSPORT`            | `stdio`                                                            | Set to `http` for the self-hosted HTTP transport. |
-| `PORT`                     | `3000`                                                             | Port for the HTTP transport.                      |
 
 Point a development MCP client at the built file:
 
@@ -151,13 +149,6 @@ This selects `ranchbot-admin-cli` and requests `admin:imports` alongside the ord
 account must approve the device code. Admin sessions use `~/.ranchbot-mcp-admin-tokens.json` and a
 separate lock; ordinary sessions are unaffected. `list_pending_imports`, `get_import_request`, and
 `update_import_request_status` require this session.
-
-### Self-hosted HTTP transport
-
-Set `MCP_TRANSPORT=http` to run the stateless Streamable HTTP transport. It listens for JSON-RPC on
-`POST /mcp`, serves `GET /status`, and authenticates every request with a
-`Bearer rb_sk_…` API key. API keys are deprecated and intended only for directed development
-compatibility, not customer onboarding. Deploy it behind TLS.
 
 ## Packaging, release, and deployment
 

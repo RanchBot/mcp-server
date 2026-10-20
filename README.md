@@ -1,20 +1,21 @@
 # Ranch.Bot MCP Server
 
 Read and write cattle and sheep records through a local MCP server on your own computer. It uses
-your Ranch.Bot account over the stdio transport and exposes one farm at a time; Ranch.Bot operates
-no hosted MCP endpoint.
+your Ranch.Bot account over the stdio transport and exposes one farm at a time. Hosted connections
+are not public yet. ChatGPT access is a private pilot. Ranch.Bot’s Claude connector is in review;
+you can still connect it privately as a custom connector.
 
 Requirements: Node.js 22 or newer, a Ranch.Bot account, and access to a farm.
 
 ## Install and sign in
 
-These commands install this source package's version (0.1.6). For the recommended public release,
+These commands install this source package's version (0.2.0). For the recommended public release,
 use the pinned command on [MCP setup](https://ranch.bot/docs/mcp-setup), the source of truth for
 setup; release status and promotion rules live in [MAINTAINING.md](MAINTAINING.md). Stop older CLI
 and MCP processes before upgrading; never remove their active lock files.
 
 ```bash
-npm install -g @ranchbot/mcp-server@0.1.6
+npm install -g @ranchbot/mcp-server@0.2.0
 ranchbot-mcp --version
 ranchbot-mcp login
 ```
@@ -55,6 +56,13 @@ default with `set_default_farm` is optional. If access is denied, check the acco
 membership; missing authentication means terminal login, then retry. Tool calls never start browser
 approval. A different account clears the process's default farm.
 
+`list_animals` accepts `query`, `match_mode` (`exact` default, or `partial`) and
+`identifier_type`; exact matches saved identifiers and the current profile name, partial is literal
+substring discovery over profile names and `NAME`/`MANAGEMENT_TAG` identifiers. `list_records`
+accepts `animal_id`, `group_id`, `include_group_context` and explicit inclusive/exclusive
+`applied_from`/`applied_before` RFC3339 bounds; the first three and the bounds activate bounded
+history mode. Scoped credentials need the matching extra read scope for a target filter.
+
 A useful read-only task: "Summarize the selected farm's current inventory." Read the complete
 relevant population, follow each operation's pagination (`skip`/`take`) and returned `total`, and
 report incomplete retrieval rather than presenting a first page as the whole answer.
@@ -71,9 +79,11 @@ Owners can create and update and confirm a birth; deleting animals, groups, reco
 needs Owner access. Birth confirmation also needs the `write:records`, `write:animals`, and
 `write:groups` scopes. A missing scope and a missing role are separate problems.
 
-Births use a dedicated `preview_birth_event` → approval → `confirm_birth_event` workflow. A saved
-birth cannot be corrected through these tools: stop and refer the producer to
-[support](https://ranch.bot/support) without promising an amendment. Read the
+Direct births use `preview_birth_event` → approval → `confirm_birth_event`. Saved amendments and
+entered-in-error use `preview_workflow` with `operation: "amend_birth"`, the record revision and a
+reason, then exact approval and `commit_workflow`, when exposed by the connected release. Never
+re-record a birth as a correction; if capability is missing, stop and contact
+[support](https://ranch.bot/support). Read the
 [birth events reference](skills/ranchbot/references/birth-events.md) before handling births.
 
 Farms can configure a versioned `record_birth` template that drives the shared
@@ -100,7 +110,7 @@ details are in the [MCP reference](skills/ranchbot/references/mcp.md).
 - [MCP reference](skills/ranchbot/references/mcp.md) — connection, tool discovery, farm context,
   errors, and optional skill installation.
 - [Birth events reference](skills/ranchbot/references/birth-events.md) — preview, confirmation,
-  retry, and unsupported corrections.
+  retry, saved amendments, and capability limits.
 - [Exports reference](skills/ranchbot/references/exports.md) — archive create, poll, cancel, and
   download.
 - [Mixed-source reconciliation](skills/ranchbot/SKILL.md#mixed-source-reconciliation) — historical

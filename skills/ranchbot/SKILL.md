@@ -42,7 +42,11 @@ Use the reference that matches the task and the connected interface; read only t
    animals where the API supports it. Follow each operation's pagination (`--skip`/`--take`) and
    returned totals; keep reading pages until the task is covered. If retrieval is incomplete or
    partial, say so — never present a truncated page as the whole answer. `ALL` does not mean deleted
-   profiles are included.
+   profiles are included. For an animal-history question, request saved births
+   (`animals get --include-saved-births`, or MCP `get_animal` with
+   `include_saved_births: true`) and page them until complete: a dam with no ordinary records can
+   still have a recorded litter, and an empty ordinary history is not evidence that she never gave
+   birth.
 
 5. **Never create during a read.** CLI `animals find-by-eid` and MCP `find_animal_by_identifier`
    **find or create** an animal. Never call them for a read-only identifier lookup. Use the
@@ -77,10 +81,12 @@ Use the reference that matches the task and the connected interface; read only t
 - Chute sessions are proposals; do not treat a proposal as an applied record.
 - For configured births use the [template workflow](references/workflows.md); for direct bundles use
   the [birth compatibility path](references/birth-events.md). Preserve the exact approval for the
-  selected path and re-preview unconfirmed input changes. Saved birth correction is **not currently supported** by any
-  public CLI or MCP operation: stop and refer the producer to https://ranch.bot/support without
-  promising an amendment, and never re-record the event or fall back to generic edits. See the
-  [birth events reference](references/birth-events.md) for retry and recovery detail.
+  selected path and re-preview unconfirmed input changes. For saved amendments or entered-in-error,
+  use `preview_workflow` with `operation: "amend_birth"`, `record_id`, `expected_revision` and a
+  reason, then review and `commit_workflow`, only when exposed by the connected release. Otherwise
+  stop and contact https://ranch.bot/support. Never re-record a saved birth or use generic edits as
+  a workaround. Approval attestations bind reviewed inputs; they do not prove a human reviewed them.
+  See the [birth events reference](references/birth-events.md) for supported changes and recovery.
 - Admin imports, admin account deletion, and observer SMS investigation are outside this public
   skill. If a task needs them, stop and explain that they require a separate server-authorized
   login.

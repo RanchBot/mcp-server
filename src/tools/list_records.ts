@@ -11,7 +11,16 @@ export async function handleTool(client: RanchBotApiClient, farmId: string, args
     throw new Error('farm_id is required');
   }
 
-  const params: { skip?: number; take?: number; type?: string } = {};
+  const params: {
+    skip?: number;
+    take?: number;
+    type?: string;
+    animal_id?: string;
+    group_id?: string;
+    include_group_context?: boolean;
+    applied_from?: string;
+    applied_before?: string;
+  } = {};
   if (validated.skip !== undefined) {
     params.skip = validated.skip;
   }
@@ -21,6 +30,12 @@ export async function handleTool(client: RanchBotApiClient, farmId: string, args
   if (validated.type) {
     params.type = validated.type;
   }
+  if (validated.animal_id !== undefined) params.animal_id = validated.animal_id;
+  if (validated.group_id !== undefined) params.group_id = validated.group_id;
+  if (validated.include_group_context !== undefined)
+    params.include_group_context = validated.include_group_context;
+  if (validated.applied_from !== undefined) params.applied_from = validated.applied_from;
+  if (validated.applied_before !== undefined) params.applied_before = validated.applied_before;
 
   const result = await client.listRecords(targetFarmId, params);
   return {

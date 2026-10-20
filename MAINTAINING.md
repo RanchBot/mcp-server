@@ -70,9 +70,6 @@ Use `list_my_farms` then `set_default_farm`, or supply an explicit `farm_id`, be
 A replacement session for a different principal clears the in-process farm selection. Tokens are cached locally in `~/.ranchbot-mcp-tokens.json` with restricted file
 permissions and refresh when the configured environment supports it.
 
-The optional self-hosted HTTP transport uses bearer API-key auth for development compatibility. API
-keys are deprecated and are not part of customer onboarding.
-
 ### Login and session troubleshooting
 
 - **Expired or missing session:** a tool call that returns terminal-login instructions means no
@@ -106,8 +103,8 @@ Run `node dist/index.js login --admin` before using admin mode;
 admin refresh and sign-in do not replace the ordinary session.
 
 The `list_pending_imports`, `get_import_request`, and `update_import_request_status` tools require
-this admin session. Ordinary device sessions and the HTTP transport's API keys cannot use them.
-The API checks both the import capability and current admin status on every request.
+this admin session. Ordinary device sessions cannot use them. The API checks both the import
+capability and current admin status on every request.
 
 ## Checks
 

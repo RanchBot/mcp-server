@@ -7,13 +7,28 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 export const generatedCrudTools: Tool[] = [
   {
     "name": "get_animal",
-    "description": "Get details about a specific animal by its UUID.",
+    "description": "Get an animal by UUID. include_saved_births also returns saved birth bundles, even when it has no ordinary records; page with birth_skip while has_more is true.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "animal_id": {
           "type": "string",
           "description": "The animal UUID."
+        },
+        "include_saved_births": {
+          "type": "boolean",
+          "description": "Also return saved_births as dam or offspring. Default false; the chat includes them by default."
+        },
+        "birth_skip": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Offset into saved_births."
+        },
+        "birth_take": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Page size for saved_births; max 200 (default 50)."
         },
         "farm_id": {
           "type": "string",
@@ -31,7 +46,7 @@ export const generatedCrudTools: Tool[] = [
   },
   {
     "name": "list_animals",
-    "description": "List current animals on the farm, optionally paginated. Select an inventory status or ALL to discover historical profiles.",
+    "description": "List current animals on the farm, optionally paginated. Select an inventory status or ALL to discover historical profiles. With a query, search saved identifiers and the current profile name: exact equality by default (case-sensitive), or explicit partial substring discovery.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -53,9 +68,33 @@ export const generatedCrudTools: Tool[] = [
             "UNKNOWN",
             "SOLD",
             "DECEASED",
+            "NOT_MANAGED",
             "ALL"
           ],
-          "description": "Defaults to CURRENT; ALL includes every nondeleted profile."
+          "description": "Defaults to CURRENT without a query; ALL (all nonarchived profiles) when searching."
+        },
+        "query": {
+          "type": "string",
+          "description": "An identifier value or current profile name to find. Blank is rejected. Matching is case-sensitive and literal by default."
+        },
+        "match_mode": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "partial"
+          ],
+          "description": "exact (default) full-value equality; partial literal case-insensitive substring over profile names, NAME and MANAGEMENT_TAG identifiers (2+ characters)."
+        },
+        "identifier_type": {
+          "type": "string",
+          "enum": [
+            "BRAND",
+            "EID",
+            "MANAGEMENT_TAG",
+            "NAME",
+            "TATTOO"
+          ],
+          "description": "Restrict to one identifier type. On an exact query this is binding (an EID miss is not a name lookup); partial supports only NAME or MANAGEMENT_TAG."
         },
         "farm_id": {
           "type": "string",
@@ -108,9 +147,10 @@ export const generatedCrudTools: Tool[] = [
             "CURRENT",
             "UNKNOWN",
             "SOLD",
-            "DECEASED"
+            "DECEASED",
+            "NOT_MANAGED"
           ],
-          "description": "Inventory status: CURRENT (default on create), UNKNOWN when current presence is unconfirmed, SOLD, or DECEASED. Historical profiles remain readable."
+          "description": "Inventory status: CURRENT (default on create), UNKNOWN when current presence is unconfirmed, SOLD, DECEASED, or NOT_MANAGED when care ended without sale or death. Historical profiles remain readable."
         },
         "metadata": {
           "type": "object",
@@ -173,9 +213,10 @@ export const generatedCrudTools: Tool[] = [
             "CURRENT",
             "UNKNOWN",
             "SOLD",
-            "DECEASED"
+            "DECEASED",
+            "NOT_MANAGED"
           ],
-          "description": "Inventory status: CURRENT (default on create), UNKNOWN when current presence is unconfirmed, SOLD, or DECEASED. Historical profiles remain readable."
+          "description": "Inventory status: CURRENT (default on create), UNKNOWN when current presence is unconfirmed, SOLD, DECEASED, or NOT_MANAGED when care ended without sale or death. Historical profiles remain readable."
         },
         "metadata": {
           "type": "object",
@@ -294,7 +335,7 @@ export const generatedCrudTools: Tool[] = [
   },
   {
     "name": "update_group",
-    "description": "Update an existing group.",
+    "description": "Update an existing group, and optionally add animals to it. Membership is additive: animal_ids adds those animals and never removes existing members. Omit animal_ids (or pass an empty array) to leave membership unchanged. Every requested animal must be an active animal on the same farm; any unknown, archived or other-farm animal fails the whole update. A group update that adds animals cannot be undone.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -310,6 +351,14 @@ export const generatedCrudTools: Tool[] = [
           "type": "string",
           "description": "The new description of the group."
         },
+        "animal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Animal UUIDs to ADD to the group (additive; existing members are preserved). Omit or pass [] to leave membership unchanged. Cannot be undone."
+        },
         "farm_id": {
           "type": "string",
           "description": "The ID of the farm (optional if a default is set)."
@@ -323,6 +372,52 @@ export const generatedCrudTools: Tool[] = [
       "title": "update_group",
       "readOnlyHint": false,
       "destructiveHint": false
+    }
+  },
+  {
+    "name": "update_group_membership",
+    "description": "Add and remove group members. Pass the membership_fingerprint from a fresh group read; a stale one is a 409 conflict. add/remove ids must not overlap, targets must be same-farm, and additions must be active. Returns the ids actually changed. Removal changes no record and cannot be undone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "add_animal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 200
+        },
+        "remove_animal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 200
+        },
+        "membership_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "farm_id": {
+          "type": "string",
+          "description": "The ID of the farm (optional if a default is set)."
+        }
+      },
+      "required": [
+        "group_id",
+        "membership_fingerprint"
+      ]
+    },
+    "annotations": {
+      "title": "update_group_membership",
+      "readOnlyHint": false,
+      "destructiveHint": true
     }
   },
   {
@@ -377,7 +472,7 @@ export const generatedCrudTools: Tool[] = [
   },
   {
     "name": "list_records",
-    "description": "List records (events applied to animals or groups, e.g. feed/health/movement) on the farm.",
+    "description": "List records (events applied to animals or groups, e.g. feed/health/movement) on the farm. Without a target or time bound this is the ordinary farm-wide list. With an animal_id, group_id and/or applied_from/applied_before it becomes a bounded history read (default 50, max 200). Scoped credentials: an animal_id filter also needs read:animals, a group_id filter also needs read:groups, and include_group_context needs both.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -402,6 +497,28 @@ export const generatedCrudTools: Tool[] = [
             "OTHER"
           ],
           "description": "Filter by record type."
+        },
+        "animal_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Direct saved records for one animal, regardless of inventory status."
+        },
+        "group_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Direct saved records for one same-farm group (archived groups allowed)."
+        },
+        "include_group_context": {
+          "type": "boolean",
+          "description": "With an animal_id, also include records attached to the animal’s current active same-farm groups. Requires animal_id."
+        },
+        "applied_from": {
+          "type": "string",
+          "description": "Inclusive RFC3339 timestamp with an explicit timezone offset."
+        },
+        "applied_before": {
+          "type": "string",
+          "description": "Exclusive RFC3339 timestamp with an explicit timezone offset."
         },
         "farm_id": {
           "type": "string",
@@ -440,7 +557,7 @@ export const generatedCrudTools: Tool[] = [
   },
   {
     "name": "create_record",
-    "description": "Create a record (an event such as a feeding, health treatment, or movement) and attach it to animals and/or groups. Always pass at least one resolved animal or group UUID — a record attached to nothing will not appear in any animal's history.",
+    "description": "Create a record (a dated event such as a feeding, health treatment, movement, or a turnout, mating, breeding or exposure observation) and attach it to animals and/or groups. A turnout, mating, breeding or exposure observation is an ordinary dated record — never a birth proposal and never offspring. Route it here with type GENETIC, preserving the producer’s facts, unknowns and attachments. For example: a ram joining a ewe is a GENETIC record; a ewe lambing twins is a propose_birth_event bundle. Always pass at least one resolved animal or group UUID — a record attached to nothing will not appear in any animal's history.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -457,7 +574,7 @@ export const generatedCrudTools: Tool[] = [
             "MOVEMENT",
             "OTHER"
           ],
-          "description": "The kind of event."
+          "description": "The kind of event. Use GENETIC for turnout, mating, breeding or exposure observations; FEED for feeding; HEALTH for health or condition; MOVEMENT for a move or pasture change; OTHER for a neutral stock check."
         },
         "applied_at": {
           "type": "string",

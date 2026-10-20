@@ -114,11 +114,13 @@ Rules that keep a birth safe:
   event. That is not a correction.
 - **An uncertain outcome needs reads first.** If a confirmation times out or its result is unclear,
   reconcile with reads before any further write.
-- **Saved-birth correction is unsupported.** A saved birth cannot be corrected through these tools.
-  Stop and refer the producer to [support](https://ranch.bot/support) without promising an
-  amendment. Never re-record a saved birth to correct it: do not send a corrected bundle through a
-  new preview or confirmation, substitute a new `request_id`, strip or forge source provenance, or
-  fall back to generic animal, record, or task edits, even with producer approval.
+- **Saved amendments use workflow review.** When exposed by the connected release, use
+  `preview_workflow` with `operation: "amend_birth"`, `record_id`, `expected_revision`, a reason and
+  supported changes; `amendment_operation: "entered_in_error"` requests invalidation. Review and
+  commit the exact preview. If absent, stop and contact [support](https://ranch.bot/support).
+  Never re-record a birth or substitute generic edits. See the
+  [birth reference](../skills/ranchbot/references/birth-events.md#saved-amendments-and-entered-in-error)
+  for retained related work and read-before-retry recovery.
 
 Related birth tools: `list_farm_tasks` includes undated TODOs, and `update_farm_task` changes a
 task's status and optional due date. `list_protocol_versions` and `create_protocol_version` use
@@ -203,7 +205,8 @@ rejection, inspect the reason and create a fresh preview with renewed approval o
 After an **uncertain** commit, read the existing preview first. A committed status returns the saved
 outcome. If still pending or unreadable, stop and reconcile; never automatically create a new request
 or switch to direct birth tools. An explicitly approved retry of the same successful preview returns
-the same receipt without another birth. Saved-birth correction remains unsupported.
+the same receipt without another birth. Saved amendments use the `amend_birth` workflow described
+in the [birth reference](../skills/ranchbot/references/birth-events.md#saved-amendments-and-entered-in-error).
 
 ### Run the example on a disposable farm
 

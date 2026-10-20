@@ -6,6 +6,7 @@ const argsSchema = z.object({
   farm_id: z.string().optional(),
   group_id: z.string(),
   name: z.string().optional(),
+  animal_ids: z.array(z.string().uuid()).optional(),
 });
 
 export async function handleTool(client: RanchBotApiClient, farmId: string, args: any) {
@@ -16,17 +17,23 @@ export async function handleTool(client: RanchBotApiClient, farmId: string, args
     throw new Error('farm_id is required');
   }
 
-  const data: { description?: string; name?: string } = {};
+  const data: { description?: string; name?: string; animal_ids?: string[] } = {};
   if (validated.name !== undefined) {
     data.name = validated.name;
   }
   if (validated.description !== undefined) {
     data.description = validated.description;
   }
+  if (validated.animal_ids !== undefined) {
+    data.animal_ids = validated.animal_ids;
+  }
 
   const result = await client.updateGroup(targetFarmId, validated.group_id, data);
   return {
     ...result,
-    message: `Group ${validated.group_id} updated successfully`,
+    message:
+      (validated.animal_ids?.length ?? 0) > 0
+        ? `Ensured the requested animals belong to group ${validated.group_id}`
+        : `Group ${validated.group_id} updated successfully`,
   };
 }

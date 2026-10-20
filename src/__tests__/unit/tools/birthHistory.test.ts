@@ -1,19 +1,29 @@
 import { RanchBotApiClient } from '../../../client';
-import { getToolHandlerPath } from '../../../toolRegistry';
+import { getToolHandler } from '../../../toolRegistry';
 import { registerTools } from '../../../tools';
 import * as handlers from '../../../tools/_shared/birthHistoryShared';
 import { birthHistoryTools } from '../../../tools/_shared/birthHistoryTools';
+import { withReadableTitle } from '../../../tools/toolPresentation';
 
 const farmId = '11111111-1111-4111-8111-111111111111';
 const damId = '22222222-2222-4222-8222-222222222222';
-it('registers callable history tools with an explicit settings schema and correct write annotation', async () => {
+/** Each per-tool module re-exports the shared implementation, so identity is preserved. */
+const historyHandlerByName: Record<string, unknown> = {
+  get_birth_history_settings: handlers.getBirthHistorySettings,
+  set_birth_history_settings: handlers.setBirthHistorySettings,
+  get_birth_history_evidence: handlers.getBirthHistoryEvidence,
+};
+it('registers callable history tools with an explicit settings schema and correct write annotation', () => {
   for (const tool of birthHistoryTools) {
-    expect(registerTools()).toContainEqual({
-      ...tool,
-      description: expect.stringContaining(tool.description!),
-    });
-    expect(getToolHandlerPath(tool.name)).toBe(`./tools/${tool.name}.js`);
-    expect(typeof (await import(`../../../tools/${tool.name}`)).handleTool).toBe('function');
+    expect(registerTools()).toContainEqual(
+      withReadableTitle({
+        ...tool,
+        description: expect.stringContaining(tool.description!),
+      }),
+    );
+    const handler = getToolHandler(tool.name);
+    expect(handler).toBe(historyHandlerByName[tool.name]);
+    expect(typeof handler).toBe('function');
     expect(tool.annotations?.readOnlyHint).toBe(tool.name !== 'set_birth_history_settings');
   }
   const schema = birthHistoryTools.find((tool) => tool.name === 'set_birth_history_settings')!

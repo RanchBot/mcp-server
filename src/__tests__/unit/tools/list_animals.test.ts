@@ -23,6 +23,23 @@ describe('list_animals tool', () => {
     });
   });
 
+  it('forwards identifier-search parameters', async () => {
+    const client = createMockClient();
+    client.listAnimals.mockResolvedValueOnce({ records: [] } as any);
+
+    await listAnimals(client, 'farm-1', {
+      query: 'Ewe 001',
+      match_mode: 'partial',
+      identifier_type: 'NAME',
+    });
+
+    expect(client.listAnimals).toHaveBeenCalledWith('farm-1', {
+      query: 'Ewe 001',
+      match_mode: 'partial',
+      identifier_type: 'NAME',
+    });
+  });
+
   it('throws when farm id is missing', async () => {
     const client = createMockClient();
 

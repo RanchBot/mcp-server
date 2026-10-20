@@ -1,51 +1,70 @@
-import { getToolHandlerPath, toolRegistry } from '../../../toolRegistry';
+import { registerTools } from '../../../tools';
+import { getToolHandler, toolRegistry } from '../../../toolRegistry';
+import { handleTool as getAnimalHandler } from '../../../tools/get_animal';
+import { handleTool as getBirthHistorySettingsHandler } from '../../../tools/get_birth_history_settings';
+import { handleTool as getCurrentContextHandler } from '../../../tools/get_current_context';
+import { handleTool as getFarmHandler } from '../../../tools/get_farm';
+import { handleTool as listAnimalsHandler } from '../../../tools/list_animals';
+import { handleTool as listMyFarmsHandler } from '../../../tools/list_my_farms';
+import { handleTool as previewWorkflowHandler } from '../../../tools/preview_workflow';
+import { handleTool as setDefaultFarmHandler } from '../../../tools/set_default_farm';
+import { handleTool as updateRecordHandler } from '../../../tools/update_record';
+
+/**
+ * Explicit handler identities spanning tool families and re-export aliases. The
+ * registry must bind these exact functions, not look them up by path.
+ */
+const expectedHandlers: Record<string, unknown> = {
+  get_animal: getAnimalHandler,
+  get_birth_history_settings: getBirthHistorySettingsHandler,
+  get_current_context: getCurrentContextHandler,
+  get_farm: getFarmHandler,
+  list_animals: listAnimalsHandler,
+  list_my_farms: listMyFarmsHandler,
+  preview_workflow: previewWorkflowHandler,
+  set_default_farm: setDefaultFarmHandler,
+  update_record: updateRecordHandler,
+};
 
 describe('toolRegistry', () => {
-  it('contains all expected tool mappings', () => {
-    expect(toolRegistry).toMatchObject({
-      // Farm tools
-      list_my_farms: './tools/list_my_farms.js',
-      get_farm: './tools/get_farm.js',
-      set_default_farm: './tools/set_default_farm.js',
-      get_current_context: './tools/get_current_context.js',
-
-      // Animal tools
-      list_animals: './tools/list_animals.js',
-      get_animal: './tools/get_animal.js',
-      create_animal: './tools/create_animal.js',
-      update_animal: './tools/update_animal.js',
-      delete_animal: './tools/delete_animal.js',
-      find_animal_by_identifier: './tools/find_animal_by_identifier.js',
-
-      // Identifier tools
-      list_identifiers: './tools/list_identifiers.js',
-      add_identifier: './tools/add_identifier.js',
-      remove_identifier: './tools/remove_identifier.js',
-
-      // Group tools
-      list_groups: './tools/list_groups.js',
-      get_group: './tools/get_group.js',
-      create_group: './tools/create_group.js',
-      update_group: './tools/update_group.js',
-      delete_group: './tools/delete_group.js',
-
-      // Record tools
-      list_records: './tools/list_records.js',
-      get_record: './tools/get_record.js',
-      create_record: './tools/create_record.js',
-      update_record: './tools/update_record.js',
-      delete_record: './tools/delete_record.js',
-    });
+  it('is frozen against runtime mutation', () => {
+    expect(Object.isFrozen(toolRegistry)).toBe(true);
   });
 
-  it('getToolHandlerPath returns mapped handler path', () => {
-    expect(getToolHandlerPath('list_my_farms')).toBe('./tools/list_my_farms.js');
+  it('maps each name to its statically imported handler', () => {
+    for (const [name, handler] of Object.entries(expectedHandlers)) {
+      expect(getToolHandler(name)).toBe(handler);
+    }
   });
 
-  it.each(['unknown_tool', 'constructor', 'toString', '__proto__', 'hasOwnProperty'])(
-    'getToolHandlerPath returns undefined for unregistered name %s',
-    (name) => {
-      expect(getToolHandlerPath(name)).toBeUndefined();
-    },
-  );
+  it('covers exactly the advertised tool names with no duplicates', () => {
+    const advertised = registerTools().map((tool) => tool.name);
+    expect(new Set(advertised).size).toBe(advertised.length);
+    expect([...advertised].sort()).toEqual(Object.keys(toolRegistry).sort());
+  });
+
+  it('exposes a callable handler for every registry entry', () => {
+    for (const name of Object.keys(toolRegistry)) {
+      expect(typeof getToolHandler(name)).toBe('function');
+    }
+  });
+
+  it.each([
+    'unknown_tool',
+    'constructor',
+    'toString',
+    '__proto__',
+    'hasOwnProperty',
+    'valueOf',
+    './tools/get_animal',
+    '../tools/get_animal',
+    '../../etc/passwd',
+    '/etc/passwd',
+    '/tmp/tools/get_animal',
+    'node:fs',
+    'tools/get_animal',
+    'fs',
+  ])('getToolHandler returns undefined for unregistered name %s', (name) => {
+    expect(getToolHandler(name)).toBeUndefined();
+  });
 });

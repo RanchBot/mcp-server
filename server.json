@@ -7,12 +7,12 @@
     "source": "github"
   },
   "websiteUrl": "https://ranch.bot",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@ranchbot/mcp-server",
-      "version": "0.1.6",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       }

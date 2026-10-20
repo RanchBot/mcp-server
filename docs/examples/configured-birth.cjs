@@ -157,7 +157,6 @@ const main = async () => {
       ),
       RANCHBOT_API_URL: origin,
       RANCHBOT_DEPLOYMENT_MODE: 'cloud',
-      MCP_TRANSPORT: 'stdio',
       COGNITO_DEVICE_CLIENT_ID: 'ranchbot-mcp',
     },
     stderr: 'pipe',

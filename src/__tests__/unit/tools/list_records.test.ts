@@ -25,6 +25,25 @@ describe('list_records tool', () => {
     });
   });
 
+  it('forwards bounded-history parameters', async () => {
+    const client = createMockClient();
+    client.listRecords.mockResolvedValueOnce({ records: [] } as any);
+
+    await listRecords(client, 'farm-1', {
+      animal_id: '11111111-1111-4111-8111-111111111111',
+      include_group_context: true,
+      applied_from: '2026-10-10T00:00:00Z',
+      applied_before: '2026-10-11T00:00:00Z',
+    });
+
+    expect(client.listRecords).toHaveBeenCalledWith('farm-1', {
+      animal_id: '11111111-1111-4111-8111-111111111111',
+      include_group_context: true,
+      applied_from: '2026-10-10T00:00:00Z',
+      applied_before: '2026-10-11T00:00:00Z',
+    });
+  });
+
   it('throws when farm id is missing', async () => {
     const client = createMockClient();
 

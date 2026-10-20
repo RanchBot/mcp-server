@@ -5,6 +5,10 @@ defaults, units, and custom observations. This is distinct from the direct-bundl
 path in [birth-events.md](birth-events.md); both use the same atomic birth writer. Never switch
 paths or interfaces to bypass a denial or to replay an uncertain write.
 
+The current configured path requires offspring and creates new CURRENT profiles, explicitly shown
+in the proposed bundle. Observation-only, existing-offspring and mixed capture use the direct
+bundle schema; do not invent template keys for them.
+
 ## Discover access before promising a save
 
 Check the connected MCP tool list or the installed CLI's `workflow-templates --help` and
@@ -88,8 +92,9 @@ why, then obtain a fresh preview and renewed approval when appropriate. Do not s
 After an uncertain commit, **read the existing preview first**. Committed status returns its saved
 outcome. If pending or unreadable, stop and reconcile before any explicitly requested retry. Do not
 make a new request ID as recovery. An identical successful retry returns the same receipt, not a
-second birth. An uncommitted preview can be discarded explicitly. Saved-birth correction is still
-unsupported; use the [birth correction boundary](birth-events.md#unsupported-corrections).
+second birth. An uncommitted preview can be discarded explicitly. Saved amendments and
+entered-in-error use `operation: "amend_birth"` when exposed by the connected release; follow the
+[amendment review and recovery](birth-events.md#saved-amendments-and-entered-in-error).
 
 ## Worked example
 

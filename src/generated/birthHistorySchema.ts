@@ -16,6 +16,7 @@ export const birthHistorySettingsJsonSchema = {
         "GOAT",
         "HORSE",
         "OTHER",
+        "PIG",
         "SHEEP"
       ]
     },

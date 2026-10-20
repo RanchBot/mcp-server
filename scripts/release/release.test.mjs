@@ -40,35 +40,40 @@ const sha = 'a'.repeat(40);
 const integrity =
   'sha512-m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw==';
 
-test('packaged README keeps the saved-birth boundary and routes recovery detail to the reference', () => {
+test('packaged README routes saved amendments and links exact recovery details', () => {
   const readme = readFileSync(join(root, 'README.md'), 'utf8').replace(/\s+/g, ' ');
 
-  // The README carries the essential boundary only, plus a link to the canonical recovery detail.
-  assert.match(readme, /A saved birth cannot be corrected through these tools/);
-  assert.match(
-    readme,
-    /stop and refer the producer to \[support\]\(https:\/\/ranch\.bot\/support\)/,
-  );
-  assert.match(readme, /without promising an amendment/);
+  assert.match(readme, /preview_workflow.*amend_birth.*record revision.*reason/);
+  assert.match(readme, /exact approval and `commit_workflow`/);
+  assert.match(readme, /when exposed by the connected release/);
+  assert.match(readme, /Never re-record a birth as a correction/);
+  assert.match(readme, /stop and contact \[support\]\(https:\/\/ranch\.bot\/support\)/);
   assert.match(
     readme,
     /birth events reference\]\(skills\/ranchbot\/references\/birth-events\.md\)/,
   );
-  assert.doesNotMatch(readme, /Corrections (?:or changed evidence )?require a fresh preview/);
+  assert.doesNotMatch(readme, /A saved birth cannot be corrected through these tools/);
 
-  // The full retry/recovery rationale has one home: the bundled birth reference.
   const reference = readFileSync(
     join(root, 'skills/ranchbot/references/birth-events.md'),
     'utf8',
   ).replace(/\s+/g, ' ');
-  assert.match(reference, /Saved birth correction is \*\*not currently supported\*\*/);
+  assert.match(reference, /amend_birth.*expected_revision.*reason/);
   assert.match(reference, /Before confirmation only/);
   assert.match(reference, /unconfirmed proposal/);
   assert.match(reference, /new `request_id`/);
   assert.match(reference, /provenance/);
   assert.match(reference, /duplicate/);
   assert.match(reference, /components/);
-  assert.match(reference, /unchanged retry of the exact approved tuple.*not a correction/);
+  assert.match(
+    reference,
+    /retry may reuse the exact approved `request_id`, `bundle`, and `confirmation_hash`/,
+  );
+  assert.match(
+    reference,
+    /unchanged successful capture retry retrieves the saved event, not a correction/,
+  );
+  assert.match(reference, /uncertain commit read `get_workflow_preview` first/);
 });
 
 test('only the literal true enables publication', () => {

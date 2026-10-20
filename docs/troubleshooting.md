@@ -68,8 +68,11 @@ what you intended. Never automatically replay a mutation. An unchanged retry of 
 tuple returns the already-saved event rather than duplicating it, but any other uncertain write
 should be confirmed by reading first.
 
-A saved birth cannot be corrected through the tools. Refer the producer to
-[support](https://ranch.bot/support) and do not promise an amendment.
+Saved amendments and entered-in-error use the `amend_birth` workflow when the connected release
+exposes it. Read the record, review its revision and reason, preview and approve the exact changes,
+then commit. Read `get_workflow_preview` first after an uncertain commit. Never re-record the birth
+as a correction. See the [birth reference](../skills/ranchbot/references/birth-events.md); if the
+operation is missing, stop and contact [support](https://ranch.bot/support).
 
 ## Logout failures
 

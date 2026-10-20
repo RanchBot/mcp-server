@@ -7,7 +7,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { RanchBotApiClient } from './client';
 import { SERVER_INSTRUCTIONS } from './serverInstructions';
-import { getToolHandlerPath } from './toolRegistry';
+import { getToolHandler } from './toolRegistry';
 import { registerTools } from './tools';
 import { PACKAGE_VERSION } from './version';
 import { toolInputSchemas } from './tools/_shared/toolInputSchemas';
@@ -26,12 +26,8 @@ const FARM_EXEMPT_TOOLS = [
 ];
 
 /**
- * How a running server obtains an API client and resolves the default farm.
- * Kept as a dependency so the same tool surface serves both transports:
- *   - stdio: one user per process; device-flow auth + an in-memory default farm.
- *   - http:  stateless (one request per tool call); the key from the
- *            `Authorization` header + a default farm bound to that API key, so
- *            it survives across requests and sessions with no server-side state.
+ * How a running stdio server obtains an API client and resolves the default
+ * farm. One user per process; device-flow auth plus an in-memory default farm.
  */
 export interface ServerDeps {
   getClient(): Promise<RanchBotApiClient>;
@@ -58,8 +54,8 @@ export const createRanchBotServer = (deps: ServerDeps): Server => {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name } = request.params;
     let args = request.params.arguments;
-    const toolPath = getToolHandlerPath(name);
-    if (!toolPath) {
+    const handler = getToolHandler(name);
+    if (!handler) {
       throw new McpError(ErrorCode.MethodNotFound, `Tool ${name} not found`);
     }
 
@@ -93,8 +89,7 @@ export const createRanchBotServer = (deps: ServerDeps): Server => {
       );
     }
 
-    // Persist a new default when the caller sets one (stdio: in-memory; http: on
-    // the API key, so it survives stateless requests).
+    // Persist a new default when the caller sets one (in-memory for the process).
     if (defaultTarget) {
       try {
         await deps.persistDefaultFarm(client, defaultTarget);
@@ -104,8 +99,7 @@ export const createRanchBotServer = (deps: ServerDeps): Server => {
     }
 
     try {
-      const { handleTool } = await import(toolPath);
-      const result = await handleTool(client, farmId || '', args || {});
+      const result = await handler(client, farmId || '', args || {});
       return {
         content: [
           {

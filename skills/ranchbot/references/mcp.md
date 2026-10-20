@@ -1,8 +1,9 @@
 # Ranch.Bot MCP reference
 
-Ranch.Bot provides a local stdio MCP server. It runs no hosted MCP endpoint, so ChatGPT web and
-Gemini have no Ranch.Bot-hosted connection. Requires Node.js 22 or newer, a Ranch.Bot account, and
-access to a farm.
+Ranch.Bot provides a local stdio MCP server. Hosted connections are not public yet. ChatGPT access
+is a private pilot. Ranch.Bot’s Claude connector is in review; you can still connect it privately
+as a custom connector. Gemini has no publicly available Ranch.Bot connection. Requires Node.js 22
+or newer, a Ranch.Bot account, and access to a farm.
 
 ## Connect
 

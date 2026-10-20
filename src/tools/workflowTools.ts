@@ -46,7 +46,7 @@ export const workflowTools: Tool[] = [
   ),
   define(
     'preview_workflow',
-    'Resolve one workflow run into a non-committable preview without creating livestock records. Resolves literal and today defaults once and returns structured field/domain issues. Show the producer the complete review, template version, defaults, custom answers and warnings before seeking approval for commit_workflow. A supplied or defaulted hidden value remains reviewable. Never guess a missing required answer.',
+    'Resolve one workflow run into a non-committable preview without creating livestock records. Use operation record_birth with template_id and inputs, or operation amend_birth with record_id, expected_revision, reason and changes (amendment_operation amend or entered_in_error) to preview a birth correction or invalidation. Resolves literal and today defaults once and returns structured field/domain issues. Show the producer the complete review before seeking approval for commit_workflow. Never guess a missing required answer.',
     true,
   ),
   define(
@@ -56,7 +56,7 @@ export const workflowTools: Tool[] = [
   ),
   define(
     'commit_workflow',
-    'Save one approved workflow preview through the single atomic birth writer. Requires the exact approval.confirmed true and the exact preview_hash of the preview the human reviewed: a bare preview id is insufficient. Do not describe the object or hash as cryptographic proof of a human click. This accepts no replacement inputs; a changed payload or relevant state requires a fresh preview and renewed approval. Do not generate a new preview as recovery from an uncertain commit — read get_workflow_preview first.',
+    'Save one approved workflow preview through the single atomic birth writer. Requires the exact approval.confirmed true and the exact preview_hash of the preview the human reviewed: a bare preview id is insufficient. Approval attestations bind reviewed inputs; they do not prove a human reviewed them. This accepts no replacement inputs; a changed payload or relevant state requires a fresh preview and renewed approval. Do not generate a new preview as recovery from an uncertain commit — read get_workflow_preview first.',
     false,
   ),
   define(

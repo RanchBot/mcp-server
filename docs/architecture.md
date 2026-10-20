@@ -8,9 +8,9 @@ backend owns authorization and persistence guarantees. The external MCP client o
 
 ```text
 MCP client (assistant)
-  │  stdio JSON-RPC                       self-hosted only: HTTPS + Bearer API key, POST /mcp
+  │  stdio JSON-RPC
   ▼
-src/index.ts        entrypoint: terminal login/logout, transport selection
+src/index.ts        entrypoint: terminal login/logout, stdio transport
   ▼
 src/serverFactory.ts  tool list + call routing, farm resolution and the farm-required gate
   ▼
@@ -23,9 +23,8 @@ Ranch.Bot API       scopes, farm role (RBAC), validation, transactions, idempote
 PostgreSQL          farms, animals, groups, records, birth events, tasks, protocols
 ```
 
-The same `serverFactory` tool surface serves both transports. Only the credentials and default-farm
-store differ: stdio keeps the device-flow session and an in-process farm selection; the self-hosted
-HTTP path is stateless and resolves auth and the default farm per request.
+The `serverFactory` tool surface serves the stdio transport. The device-flow session and an
+in-process farm selection live for the life of the process.
 
 ## Who enforces what
 
@@ -97,16 +96,13 @@ ID. Reads and refreshes across running processes are serialized by an OS-managed
 Admin sessions use a separate `~/.ranchbot-mcp-admin-tokens.json` cache and
 `~/.ranchbot-mcp-admin-tokens.lock`.
 
-The self-hosted HTTP transport instead requires a `Bearer rb_sk_…` API key on every request. API keys
-are deprecated and are not part of customer onboarding.
-
 ## Code map
 
 | Path                             | Role                                                      |
 | -------------------------------- | --------------------------------------------------------- |
-| `src/index.ts`                   | Entrypoint, CLI subcommands, transport selection.         |
+| `src/index.ts`                   | Entrypoint and CLI subcommands.                           |
 | `src/serverFactory.ts`           | Builds the MCP server, routes calls, resolves the farm.   |
-| `src/toolRegistry.ts`            | Maps tool names to handler modules.                       |
+| `src/toolRegistry.ts`            | Maps tool names to statically imported handler functions. |
 | `src/tools/*`                    | Per-tool Zod schemas and response shaping.                |
 | `src/generated/toolContracts.ts` | Generated tool metadata shared with the API/CLI contract. |
 | `src/client.ts`                  | Typed HTTP client for the Ranch.Bot API.                  |

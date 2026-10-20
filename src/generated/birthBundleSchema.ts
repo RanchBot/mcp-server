@@ -22,6 +22,12 @@ export const birthBundleInputSchema = {
       ],
       "default": "date_only"
     },
+    "total_born": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 1000,
+      "description": "Explicitly reported biological total, including stillborn. Omit when unknown; never derived from offspring entries."
+    },
     "dam_update": {
       "type": "object",
       "properties": {
@@ -97,13 +103,30 @@ export const birthBundleInputSchema = {
             "maxLength": 80,
             "description": "Temporary review label only; never an invented identifier."
           },
+          "animal_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Link an existing active farm animal instead of creating a profile."
+          },
           "sex": {
             "type": "string",
             "enum": [
               "male",
               "female",
               "unknown"
-            ]
+            ],
+            "description": "Required when creating a profile; omit when linking an existing animal."
+          },
+          "inventory_status": {
+            "type": "string",
+            "enum": [
+              "CURRENT",
+              "UNKNOWN",
+              "SOLD",
+              "DECEASED",
+              "NOT_MANAGED"
+            ],
+            "description": "Required when creating a profile; omit when linking an existing animal."
           },
           "identifiers": {
             "type": "array",
@@ -171,6 +194,15 @@ export const birthBundleInputSchema = {
                   "kg",
                   "lb"
                 ]
+              },
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "measured",
+                  "estimated",
+                  "unknown"
+                ],
+                "description": "Weight basis; omission means unknown, never measured."
               }
             },
             "required": [
@@ -248,13 +280,12 @@ export const birthBundleInputSchema = {
           }
         },
         "required": [
-          "review_label",
-          "sex"
+          "review_label"
         ],
         "additionalProperties": false
       },
-      "minItems": 1,
-      "maxItems": 20
+      "maxItems": 20,
+      "default": []
     },
     "sire": {
       "type": "object",
@@ -455,8 +486,7 @@ export const birthBundleInputSchema = {
   },
   "required": [
     "dam_id",
-    "birth_date",
-    "offspring"
+    "birth_date"
   ],
   "additionalProperties": false
 };

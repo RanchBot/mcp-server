@@ -31,8 +31,8 @@ it('passes inventory status independently of metadata and exposes history discov
     expect(schema.properties!.inventory_status).toMatchObject({
       enum:
         name === 'list_animals'
-          ? ['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED', 'ALL']
-          : ['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED'],
+          ? ['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED', 'NOT_MANAGED', 'ALL']
+          : ['CURRENT', 'UNKNOWN', 'SOLD', 'DECEASED', 'NOT_MANAGED'],
     });
   }
 });

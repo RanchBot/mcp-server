@@ -71,6 +71,13 @@ Auth-shaped failures tell the user to run `ranchbot login`. A missing farm tells
 - `animals list` defaults to current inventory. Use `--inventory-status CURRENT`, `UNKNOWN`, `SOLD`,
   `DECEASED`, or `ALL`. `ALL` includes historical statuses where the API supports them, but not
   deleted profiles.
+- `animals get <uuid> --include-saved-births` also returns `saved_births` for an animal as dam or
+  offspring. This is how you answer a history question for a dam whose ordinary records are empty:
+  a missing ordinary history is not evidence that she never gave birth. Follow
+  `--birth-skip`/`--birth-take` (default 50, maximum 200) until `saved_births.pagination.has_more` is
+  false, and report incomplete retrieval honestly. The response also lists each offspring's current
+  `inventory_status` (separate from the facts captured in the saved birth) and deduplicated
+  `linked_records`.
 - Complex payloads (`--data`) accept inline JSON, `@file.json`, or `-` for stdin.
 - `exports download <id> --output <path>` writes a new file and refuses to overwrite.
 
@@ -80,6 +87,12 @@ Ordinary CLI writes run directly under the signed-in user's server permissions. 
 the Ranch.Bot app review screen and do not create the Action rows behind Change History. Explain the
 operation, farm, target, and values and get the user's authorization before running a write, then
 read the record back to verify it. The binary does not enforce an assistant's approval step.
+
+Group membership has two paths. `groups update --animal` is additive and cannot remove members.
+To remove, use `groups membership <group_id> --fingerprint <hash> --add <id> --remove <id>`; read
+the group first (`groups get`) and pass the `membership_fingerprint` it returns. A stale fingerprint
+is rejected so the change is never applied to membership you did not review. Removal unlinks the
+membership only, changes no animal status or records, and cannot be undone.
 
 Treat credential files as secrets and never print or share them. Do not edit or delete lock files
 while clients are running, and stop older CLI/MCP processes before upgrading.

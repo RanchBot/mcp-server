@@ -86,14 +86,44 @@ export const workflowToolSchemas = {
         .string()
         .uuid()
         .describe('Stable request UUID. Retrying the identical payload returns the same snapshot.'),
-      template_id: z.string().uuid(),
+      operation: z
+        .enum(['record_birth', 'amend_birth'])
+        .optional()
+        .describe(
+          'Defaults to record_birth. Use amend_birth to correct or mark entered in error an existing BIRTH record.',
+        ),
+      template_id: z.string().uuid().optional(),
       template_version: z.number().int().positive().optional(),
       inputs: z
         .object({
           event: z.record(z.unknown()).optional(),
           offspring: z.array(z.record(z.unknown())).optional(),
         })
-        .strict(),
+        .strict()
+        .optional(),
+      record_id: z
+        .string()
+        .uuid()
+        .optional()
+        .describe('amend_birth: the canonical BIRTH record being corrected.'),
+      expected_revision: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('amend_birth: the record revision the producer reviewed.'),
+      reason: z.string().trim().min(1).max(1000).optional(),
+      amendment_operation: z
+        .enum(['amend', 'entered_in_error'])
+        .optional()
+        .describe('amend_birth: correct facts (amend) or invalidate the event (entered_in_error).'),
+      changes: z.record(z.unknown()).optional(),
+      bundle: z
+        .record(z.unknown())
+        .optional()
+        .describe(
+          'Untemplated record_birth only: a complete birth bundle (observation-only, existing animal links, or inline new profiles). Mutually exclusive with template_id/inputs.',
+        ),
       timezone: z
         .string()
         .min(1)

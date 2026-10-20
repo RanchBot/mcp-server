@@ -1,8 +1,23 @@
 import { RanchBotApiClient } from '../../../client';
-import { getToolHandlerPath } from '../../../toolRegistry';
+import { getToolHandler } from '../../../toolRegistry';
 import { registerTools } from '../../../tools';
 import { workflowTools } from '../../../tools/workflowTools';
 import * as tools from '../../../tools/workflowShared';
+import { withReadableTitle } from '../../../tools/toolPresentation';
+
+/** Each per-tool module re-exports the shared implementation, so identity is preserved. */
+const workflowHandlerByName: Record<string, unknown> = {
+  list_workflow_templates: tools.listWorkflowTemplates,
+  get_workflow_template: tools.getWorkflowTemplate,
+  create_workflow_template: tools.createWorkflowTemplate,
+  publish_workflow_template_version: tools.publishWorkflowTemplateVersion,
+  update_workflow_template_state: tools.updateWorkflowTemplateState,
+  set_default_workflow_template: tools.setDefaultWorkflowTemplate,
+  preview_workflow: tools.previewWorkflow,
+  get_workflow_preview: tools.getWorkflowPreview,
+  commit_workflow: tools.commitWorkflow,
+  discard_workflow: tools.discardWorkflow,
+};
 
 const farmId = '11111111-1111-4111-8111-111111111111';
 const previewId = '22222222-2222-4222-8222-222222222222';
@@ -15,15 +30,17 @@ const client = () =>
   ) as unknown as jest.Mocked<RanchBotApiClient>;
 
 describe('workflow MCP tools', () => {
-  it('registers a callable handler for every advertised workflow operation', async () => {
+  it('registers a callable handler for every advertised workflow operation', () => {
     for (const tool of workflowTools) {
-      expect(registerTools()).toContainEqual({
-        ...tool,
-        description: expect.stringContaining(tool.description!),
-      });
-      expect(getToolHandlerPath(tool.name)).toBe(`./tools/${tool.name}.js`);
-      const handler = await import(`../../../tools/${tool.name}`);
-      expect(typeof handler.handleTool).toBe('function');
+      expect(registerTools()).toContainEqual(
+        withReadableTitle({
+          ...tool,
+          description: expect.stringContaining(tool.description!),
+        }),
+      );
+      const handler = getToolHandler(tool.name);
+      expect(handler).toBe(workflowHandlerByName[tool.name]);
+      expect(typeof handler).toBe('function');
     }
   });
 

@@ -1,8 +1,9 @@
 import { createMockClient } from '../testUtils';
 import { handleTool } from '../../../tools/lookup_animal_by_eid';
 import { handleTool as findOrCreate } from '../../../tools/find_or_create_animal_by_eid';
+import { handleTool as findByIdentifier } from '../../../tools/find_animal_by_identifier';
 import { registerTools } from '../../../tools';
-import { getToolHandlerPath } from '../../../toolRegistry';
+import { getToolHandler } from '../../../toolRegistry';
 
 it.each(['not found', 'ambiguous'])('propagates %s without creation', async (message) => {
   const client = createMockClient();
@@ -36,11 +37,12 @@ it('publishes accurate schemas, annotations, and handler mappings', () => {
   const lookup = tools.get('lookup_animal_by_eid')!;
   expect(lookup.inputSchema.required).toEqual(['eid']);
   expect(lookup.annotations).toMatchObject({ readOnlyHint: true, idempotentHint: true });
-  expect(getToolHandlerPath(lookup.name)).toBe('./tools/lookup_animal_by_eid.js');
+  expect(getToolHandler(lookup.name)).toBe(handleTool);
   for (const name of ['find_or_create_animal_by_eid', 'find_animal_by_identifier']) {
     expect(tools.get(name)?.annotations?.readOnlyHint).toBe(false);
     expect(tools.get(name)?.description).toMatch(/creates an animal/);
-    expect(getToolHandlerPath(name)).toBe(`./tools/${name}.js`);
   }
+  expect(getToolHandler('find_or_create_animal_by_eid')).toBe(findOrCreate);
+  expect(getToolHandler('find_animal_by_identifier')).toBe(findByIdentifier);
   expect(tools.get('find_animal_by_identifier')?.description).toMatch(/DEPRECATED/);
 });

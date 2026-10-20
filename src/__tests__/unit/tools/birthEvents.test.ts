@@ -1,8 +1,22 @@
 import { RanchBotApiClient } from '../../../client';
-import { getToolHandlerPath } from '../../../toolRegistry';
+import { getToolHandler } from '../../../toolRegistry';
 import { birthEventTools } from '../../../tools/_shared/birthEventTools';
 import * as tools from '../../../tools/_shared/birthEventShared';
 import { registerTools } from '../../../tools';
+import { withReadableTitle } from '../../../tools/toolPresentation';
+
+/** Each per-tool module re-exports the shared implementation, so identity is preserved. */
+const birthEventHandlerByName: Record<string, unknown> = {
+  preview_birth_event: tools.previewBirthEvent,
+  confirm_birth_event: tools.confirmBirthEvent,
+  list_birth_events: tools.listBirthEvents,
+  get_birth_event: tools.getBirthEvent,
+  get_birth_source_evidence: tools.getBirthSourceEvidence,
+  list_farm_tasks: tools.listFarmTasks,
+  update_farm_task: tools.updateFarmTask,
+  list_protocol_versions: tools.listProtocolVersions,
+  create_protocol_version: tools.createProtocolVersion,
+};
 
 const farmId = '11111111-1111-4111-8111-111111111111';
 const requestId = '22222222-2222-4222-8222-222222222222';
@@ -19,15 +33,17 @@ const client = () =>
   ) as unknown as jest.Mocked<RanchBotApiClient>;
 
 describe('birth event MCP tools', () => {
-  it('registers a callable handler for every advertised birth operation', async () => {
+  it('registers a callable handler for every advertised birth operation', () => {
     for (const tool of birthEventTools) {
-      expect(registerTools()).toContainEqual({
-        ...tool,
-        description: expect.stringContaining(tool.description!),
-      });
-      expect(getToolHandlerPath(tool.name)).toBe(`./tools/${tool.name}.js`);
-      const handler = await import(`../../../tools/${tool.name}`);
-      expect(typeof handler.handleTool).toBe('function');
+      expect(registerTools()).toContainEqual(
+        withReadableTitle({
+          ...tool,
+          description: expect.stringContaining(tool.description!),
+        }),
+      );
+      const handler = getToolHandler(tool.name);
+      expect(handler).toBe(birthEventHandlerByName[tool.name]);
+      expect(typeof handler).toBe('function');
     }
   });
   it('previews without committing and forwards all structured fields', async () => {

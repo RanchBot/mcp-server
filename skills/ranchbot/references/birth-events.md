@@ -1,7 +1,10 @@
 # Birth events reference
 
 Recording a birth is a two-step, producer-approved workflow shared by the CLI and MCP server. It
-creates offspring, dam relationships, care records, tasks, and evidence links in one transaction.
+supports observation-only, existing-offspring, new-offspring and mixed captures, with reviewed
+relationships, care records, tasks and evidence links in one transaction. Existing offspring keep
+their status and identifiers; new profiles need explicit sex and inventory status. A reported total
+never invents profiles. Configured templates expose their own input fields; inspect that schema.
 Availability is capability-dependent: if the connected release does not expose the birth commands
 or tools, stop and explain — do not fall back to generic animal or record writes.
 
@@ -19,7 +22,8 @@ bundle, review, evidence, and a `confirmation_hash`.
 ## Approval
 
 Review the whole result with the producer. Show every field the producer must own — offspring
-labels and sex, weights, dated care and supplementation, protocol version or unresolved claim,
+labels, existing versus new profiles, explicit sex/status for creations, reported total, weights,
+dated care and supplementation, protocol version or unresolved claim,
 group membership, evidence assignments, sire claim, and follow-up dates. Review labels are
 temporary; they are never animal identifiers. Get explicit approval of that exact preview. Do not
 treat silence, an earlier approval, or a similar-looking birth as approval.
@@ -46,21 +50,37 @@ An explicitly requested retry may reuse the exact approved `request_id`, `bundle
 its already-saved event; it is a retrieval, not a correction. A different payload cannot reuse that
 request ID. If a confirmation outcome is uncertain, reconcile with reads before any further write.
 
-## Unsupported corrections
+<a id="unsupported-corrections"></a>
 
-Saved birth correction is **not currently supported** by any public CLI or MCP operation. If a
-producer asks to correct a saved birth, stop and refer them to https://ranch.bot/support; do not
-promise that support will perform an amendment.
+## Saved amendments and entered-in-error
 
-Never work around this by re-recording the saved birth. Do not send the corrected information
-through a new preview/confirmation, substitute a new `request_id`, strip or forge SMS/source
-provenance, delete or edit the saved event's components, or fall back to generic animal, record, or
-task edits. A fresh request ID without the original SMS source reaches normal creation and can
-duplicate offspring, birth and care records, and tasks while leaving the incorrect saved event in
-place; generic edits bypass the birth transaction and its evidence links.
+When the connected release exposes it, use `preview_workflow` with `operation: "amend_birth"`
+(CLI: `workflows preview --data @amendment.json`). Read the saved birth and its canonical record
+first. Supply `record_id`, the reviewed `expected_revision`, a producer-supplied `reason`, and
+`amendment_operation: "amend"` with supported `changes`, or `"entered_in_error"` to invalidate it.
+Inspect the connected schema: this is not a generic offspring-profile editor. Missing capability
+means stop and contact https://ranch.bot/support; do not promise an unavailable amendment.
 
-An unchanged retry of the exact approved tuple is not a correction: it returns the already-saved
-event. If a confirmation outcome is uncertain, reconcile with reads before any further write.
+Review all proposed changes and retained related work, obtain explicit approval, then use
+`commit_workflow` with the same `preview_id` and
+`approval: {confirmed: true, preview_hash: <reviewed hash>}`. The CLI equivalent is
+`workflows commit <preview_id> --approve <preview_hash>`. Approval attestations bind reviewed
+inputs; they do not prove a human reviewed them. A stale revision, changed input or changed
+relevant state requires another preview and renewed approval. After an uncertain commit read
+`get_workflow_preview` first; a committed preview returns its receipt. Verify the canonical record,
+active offspring links and derived facts through reads before declaring completion.
+
+Invalidation preserves offspring profiles, care records, tasks, inventory status and memberships.
+It deactivates the birth and active offspring links and removes birth-derived facts; independently
+stored profile birth dates survive. Care records can be edited separately, but generic deletion or
+whole-bundle undo of the birth remains refused. Do not treat invalidation as deleting the animals.
+
+Never re-record a saved birth as a correction. Do not substitute a new `request_id` for capture,
+strip or forge source provenance, or edit/delete protected components to bypass amendment review:
+that can duplicate offspring and care while leaving the original event in place. A new amendment
+preview has its own request identity; that is not permission to create a replacement birth.
+An unchanged successful capture retry retrieves the saved event, not a correction. Read before
+retrying any uncertain write and never switch interfaces as recovery.
 
 ## Synthetic payload examples
 
@@ -76,7 +96,7 @@ Minimal preview request:
     "dam_id": "22222222-2222-4222-8222-222222222222",
     "birth_date": "2026-09-04",
     "time_precision": "morning",
-    "offspring": [{ "review_label": "Lamb A", "sex": "female" }]
+    "offspring": [{ "review_label": "Lamb A", "sex": "female", "inventory_status": "CURRENT" }]
   }
 }
 ```
@@ -95,6 +115,7 @@ Fuller preview request with observations and care:
       {
         "review_label": "Twin A",
         "sex": "female",
+        "inventory_status": "CURRENT",
         "birth_weight": { "value": 4.2, "unit": "kg" },
         "vigor": [{ "date": "2026-09-04", "text": "Stood within five minutes" }],
         "supplementation": [
@@ -107,7 +128,7 @@ Fuller preview request with observations and care:
           }
         ]
       },
-      { "review_label": "Twin B", "sex": "male" }
+      { "review_label": "Twin B", "sex": "male", "inventory_status": "CURRENT" }
     ],
     "sire": { "status": "unknown" },
     "follow_up": [{ "name": "Check navels", "offspring_labels": ["Twin A", "Twin B"] }],
@@ -126,7 +147,7 @@ preview returned for that exact bundle):
     "dam_id": "22222222-2222-4222-8222-222222222222",
     "birth_date": "2026-09-04",
     "time_precision": "morning",
-    "offspring": [{ "review_label": "Lamb A", "sex": "female" }]
+    "offspring": [{ "review_label": "Lamb A", "sex": "female", "inventory_status": "CURRENT" }]
   },
   "confirmation_hash": "0000000000000000000000000000000000000000000000000000000000000000"
 }

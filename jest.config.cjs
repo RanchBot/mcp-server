@@ -3,11 +3,9 @@ module.exports = {
   ...(!process.env.CI ? { maxWorkers: 1 } : {}),
   preset: 'ts-jest',
   testEnvironment: 'node',
-  // The server factory dispatches tools via dynamic `import('./tools/x.js')`
-  // (the compiled extension). Map .js specs to their TS source so the factory
-  // is exercisable under ts-jest; extension-less and non-.js imports (e.g.
-  // zod's `./v3/external.cjs`) are untouched. `[.]` is a literal dot, kept
-  // backslash-free so JS string parsing can't strip it.
+  // Source imports that target compiled `.js` output (e.g. `../generated/toolContracts.js`)
+  // are mapped to their TS source so the suite runs under ts-jest. `[.]` is a literal
+  // dot, kept backslash-free so JS string parsing can't strip it.
   moduleNameMapper: {
     '^([.]{1,2}/.*)[.]js$': '$1',
   },

@@ -11,8 +11,14 @@ export async function handleTool(client: RanchBotApiClient, farmId: string, args
     throw new Error('farm_id is required');
   }
 
-  const params: { skip?: number; take?: number; inventory_status?: AnimalInventoryStatus | 'ALL' } =
-    {};
+  const params: {
+    skip?: number;
+    take?: number;
+    inventory_status?: AnimalInventoryStatus | 'ALL';
+    query?: string;
+    match_mode?: 'exact' | 'partial';
+    identifier_type?: string;
+  } = {};
   if (validated.skip !== undefined) {
     params.skip = validated.skip;
   }
@@ -22,6 +28,9 @@ export async function handleTool(client: RanchBotApiClient, farmId: string, args
 
   if (validated.inventory_status !== undefined)
     params.inventory_status = validated.inventory_status;
+  if (validated.query !== undefined) params.query = validated.query;
+  if (validated.match_mode !== undefined) params.match_mode = validated.match_mode;
+  if (validated.identifier_type !== undefined) params.identifier_type = validated.identifier_type;
 
   const result = await client.listAnimals(targetFarmId, params);
   return {
